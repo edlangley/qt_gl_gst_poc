@@ -33,7 +33,7 @@ class GstThread : public QThread
 
 public:
     GstThread(int vidIx,
-            const GLContextID &ctxId,
+//            const GLContextID &ctxId,
             const QString &videoLocation,
             const char *renderer_slot,
             QObject *parent = 0);
@@ -57,7 +57,7 @@ protected:
 
 private:
     int m_vidIx;
-    const GLContextID m_contextId;
+//    const GLContextID m_contextId;
     const QString m_videoLocation;
     Pipeline* m_pipeline;
     bool m_chooseNew;

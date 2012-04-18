@@ -1,10 +1,10 @@
 #include "glwidget.h"
-#include "pipeline.h"
+//#include "pipeline.h"
 
 GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     QGLWidget(QGLFormat(QGL::DoubleBuffer | QGL::DepthBuffer | QGL::Rgba), parent),
     closing(false),
-    frame(NULL),
+//    frame(NULL),
     brickProg(this)
 {
     xRot = 0;
@@ -36,6 +36,16 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     for(int vidIx = 1; vidIx < argc; vidIx++)
     {
         videoLoc.push_back(QString(argv[vidIx]));
+    }
+
+    // Instantiate video pipeline for each filename specified
+    for(int vidIx = 0; vidIx < this->videoLoc.size(); vidIx++)
+    {
+        this->gstThreads.push_back(new GstThread(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this));
+        QObject::connect(this->gstThreads[vidIx], SIGNAL(finished(int)),
+                         this, SLOT(gstThreadFinished(int)));
+        QObject::connect(this, SIGNAL(closeRequested()),
+                         this->gstThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
     }
 }
 
@@ -80,7 +90,7 @@ void GLWidget::nextClearColor(void)
 void GLWidget::initializeGL()
 {
     // gstreamer shared texture approach:
-    //GLContextID ctx;
+#if 0
     ctx.contextId = glXGetCurrentContext();
     const char *display_name = getenv("DISPLAY");
     if(display_name == NULL)
@@ -98,34 +108,16 @@ void GLWidget::initializeGL()
     for(int vidIx = 0; vidIx < this->videoLoc.size(); vidIx++)
     {
         this->doneCurrent();
-        this->gst_threads.push_back(new GstThread(vidIx, ctx, this->videoLoc[vidIx], SLOT(newFrame(int)), this));
+        this->gstThreads.push_back(new GstThread(vidIx, ctx, this->videoLoc[vidIx], SLOT(newFrame(int)), this));
         this->makeCurrent();
-        QObject::connect(this->gst_threads[vidIx], SIGNAL(finished(int)),
+        QObject::connect(this->gstThreads[vidIx], SIGNAL(finished(int)),
                          this, SLOT(gstThreadFinished(int)));
         QObject::connect(this, SIGNAL(closeRequested()),
-                         this->gst_threads[vidIx], SLOT(stop()), Qt::QueuedConnection);
+                         this->gstThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
     }
-/*
-    this->gst_thread =
-            new GstThread(ctx, this->videoLoc[0], SLOT(newFrame()), this);
-    this->makeCurrent();
-
-    QObject::connect(this->gst_thread, SIGNAL(finished()),
-                     this, SLOT(gstThreadFinished()));
-    QObject::connect(this, SIGNAL(closeRequested()),
-                     this->gst_thread, SLOT(stop()), Qt::QueuedConnection);
+#endif
 
 
-    this->gst_thread2 =
-            new GstThread(ctx, this->videoLoc[1], SLOT(newFrame()), this);
-    this->makeCurrent();
-
-    QObject::connect(this->gst_thread2, SIGNAL(finished()),
-                     this, SLOT(gstThreadFinished()));
-    QObject::connect(this, SIGNAL(closeRequested()),
-                     this->gst_thread2, SLOT(stop()), Qt::QueuedConnection);
-
-*/
 
     // rest of normal gl init:
 
@@ -165,11 +157,21 @@ void GLWidget::initializeGL()
 
 #endif
 
+    // Create entry in tex info vector for all pipelines
+    for(int vidIx = 0; vidIx < this->gstThreads.size(); vidIx++)
+    {
+        VidTextureInfo newInfo;
+        glGenTextures(1, &newInfo.texId);
+        newInfo.texInfoValid = false;
+        newInfo.buffer = NULL;
+
+        this->vidTextures.push_back(newInfo);
+    }
 
     //this->gst_thread->start();
-    for(int vidIx = 0; vidIx < this->gst_threads.size(); vidIx++)
+    for(int vidIx = 0; vidIx < this->gstThreads.size(); vidIx++)
     {
-        this->gst_threads[vidIx]->start();
+        this->gstThreads[vidIx]->start();
     }
 }
 
@@ -209,37 +211,45 @@ void GLWidget::paintGL()
 
     brickProg.release();
 
-    if (this->frame)
+    for(int vidIx = 0; vidIx < this->vidTextures.size(); vidIx++)
     {
-
-        // render a quad with the video on it:
-        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->frame->texture);
-        if(glGetError () != GL_NO_ERROR)
+        if(this->vidTextures[vidIx].texInfoValid)
         {
-          qDebug ("failed to bind texture that comes from gst-gl");
-          emit closeRequested();
-          return;
+
+            // render a quad with the video on it:
+            glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[vidIx].texId);
+            if(glGetError () != GL_NO_ERROR)
+            {
+              qDebug ("failed to bind texture that comes from gst-gl");
+              emit closeRequested();
+              return;
+            }
+
+            GLfloat width = this->vidTextures[vidIx].width;
+            GLfloat height = this->vidTextures[vidIx].height;
+
+            glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S,
+                          GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T,
+                          GL_CLAMP_TO_EDGE);
+            glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+            //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            glPushMatrix();
+            glRotatef((360/this->vidTextures.size())*vidIx, 0.0, 1.0, 0.0);
+
+            glBegin(GL_QUADS);
+                glTexCoord2f(width, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);
+                glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);
+                glTexCoord2f(0.0f, height); glVertex3f( 1.0f,  1.0f,  1.0f);
+                glTexCoord2f(width, height); glVertex3f(-1.0f,  1.0f,  1.0f);
+            glEnd();
+            glPopMatrix();
         }
 
-        GLfloat width = this->frame->width;
-        GLfloat height = this->frame->height;
-
-        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S,
-                      GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T,
-                      GL_CLAMP_TO_EDGE);
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-
-        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glBegin(GL_QUADS);
-            glTexCoord2f(width, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);
-            glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);
-            glTexCoord2f(0.0f, height); glVertex3f( 1.0f,  1.0f,  1.0f);
-            glTexCoord2f(width, height); glVertex3f(-1.0f,  1.0f,  1.0f);
-        glEnd();
     }
 }
 
@@ -271,17 +281,41 @@ void GLWidget::newFrame(int vidIx)
 //    GstThread *callingGstThread = qobject_cast<GstThread*>(sender());
 //    Pipeline *pipeline = callingGstThread->getPipeline();
 
-    if(this->gst_threads[vidIx])
+    if(this->gstThreads[vidIx])
     {
-        Pipeline *pipeline = this->gst_threads[vidIx]->getPipeline();
+
+        Pipeline *pipeline = this->gstThreads[vidIx]->getPipeline();
         if(!pipeline)
           return;
 
         /* frame is initialized as null */
-        if (this->frame)
-            pipeline->queue_output_buf.put(this->frame);
+        //if (this->frame)
+        if (this->vidTextures[vidIx].buffer)
+            pipeline->queue_output_buf.put(this->vidTextures[vidIx].buffer);
 
-        this->frame = pipeline->queue_input_buf.get();
+        this->vidTextures[vidIx].buffer = pipeline->queue_input_buf.get();
+
+        // load the gst buf into a texture
+        if(this->vidTextures[vidIx].texInfoValid == false)
+        {
+            // try and keep this fairly portable to other media frameworks by
+            // leaving info extraction within pipeline class
+            this->vidTextures[vidIx].width = pipeline->getWidth();
+            this->vidTextures[vidIx].height = pipeline->getHeight();
+            this->vidTextures[vidIx].colourFormat = pipeline->getColourFormat();
+            this->vidTextures[vidIx].texInfoValid = true;
+        }
+
+        // TODO: move gst macro into pipeline class, have queue contain just pointer
+        // to actual frame data
+        glBindTexture (GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[vidIx].texId);
+        glTexParameteri (GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri (GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexImage2D  (GL_TEXTURE_RECTANGLE_ARB, 0, 1,
+                       this->vidTextures[vidIx].width,
+                       this->vidTextures[vidIx].height,
+                       0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
+                       GST_BUFFER_DATA(this->vidTextures[vidIx].buffer));
 
         /* direct call to paintGL (no queued) */
         this->updateGL();
@@ -295,9 +329,9 @@ void GLWidget::gstThreadFinished(int vidIx)
     bool threadIxFound = false;
     int vidIx;
 
-    for(vidIx = 0; vidIx < this->gst_threads.size(); vidIx++)
+    for(vidIx = 0; vidIx < this->gstThreads.size(); vidIx++)
     {
-        if(callingGstThread == this->gst_threads[vidIx])
+        if(callingGstThread == this->gstThreads[vidIx])
         {
             threadIxFound = true;
             break;
@@ -308,17 +342,28 @@ void GLWidget::gstThreadFinished(int vidIx)
 
     if(this->closing)
     {
-        delete(this->gst_threads[vidIx]);
-        this->gst_threads.replace(vidIx, NULL);
+        delete(this->gstThreads[vidIx]);
+        this->gstThreads.replace(vidIx, NULL);
+        this->vidTextures[vidIx].texInfoValid = false;
 
         // check if any gst threads left, if not close
         bool allFinished = true;
-        for(int i = 0; i < this->gst_threads.size(); i++)
+        for(int i = 0; i < this->gstThreads.size(); i++)
         {
-            if(this->gst_threads[i] != NULL)
+            if(this->gstThreads[i] != NULL)
             {
-                allFinished = false;
-                break;
+                // catch any threads which were already finished at quitting time
+                if(this->gstThreads[i]->isFinished())
+                {
+                    delete(this->gstThreads[vidIx]);
+                    this->gstThreads.replace(vidIx, NULL);
+                    this->vidTextures[vidIx].texInfoValid = false;
+                }
+                else
+                {
+                    allFinished = false;
+                    break;
+                }
             }
         }
         if(allFinished)
@@ -326,20 +371,22 @@ void GLWidget::gstThreadFinished(int vidIx)
             close();
         }
     }
-    else if(this->gst_threads[vidIx]->chooseNew())
+    else if(this->gstThreads[vidIx]->chooseNew())
     {
-        delete(this->gst_threads[vidIx]);
+        delete(this->gstThreads[vidIx]);
+        this->vidTextures[vidIx].texInfoValid = false;
+
         this->videoLoc[vidIx] = QFileDialog::getOpenFileName(0, "Select a video file",
                                                 ".", "Format (*.avi *.mkv *.ogg *.asf *.mov)");
         this->makeCurrent();
-        this->gst_threads[vidIx] =
-          new GstThread(vidIx, ctx, this->videoLoc[vidIx], SLOT(newFrame()), this);
+        this->gstThreads[vidIx] =
+          new GstThread(vidIx, /*ctx,*/ this->videoLoc[vidIx], SLOT(newFrame()), this);
         this->makeCurrent();
-        this->gst_threads[vidIx]->start();
+        this->gstThreads[vidIx]->start();
     }
     else
     {
-
+        // for now should just stop at last frame?
     }
 }
 
@@ -496,8 +543,8 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
         break;
 
         case Qt::Key_V:
-            this->gst_threads[0]->stop();
-            this->gst_threads[0]->setChooseNewOnFinished();
+            this->gstThreads[0]->stop();
+            this->gstThreads[0]->setChooseNewOnFinished();
 
         break;
 
@@ -521,9 +568,9 @@ void GLWidget::closeEvent(QCloseEvent* event)
 
         // just in case, check now if any gst threads still exist, if not, close now
         bool allFinished = true;
-        for(int i = 0; i < this->gst_threads.size(); i++)
+        for(int i = 0; i < this->gstThreads.size(); i++)
         {
-            if(this->gst_threads[i] != NULL)
+            if(this->gstThreads[i] != NULL)
             {
                 allFinished = false;
                 break;

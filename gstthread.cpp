@@ -24,17 +24,17 @@
 
 
 GstThread::GstThread(int vidIx,
-        const GLContextID &ctxId,
+//        const GLContextID &ctxId,
         const QString &videoLocation,
         const char *renderer_slot,
         QObject *parent):
     QThread(parent),
     m_vidIx(vidIx),
-    m_contextId(ctxId),
+//    m_contextId(ctxId),
     m_videoLocation(videoLocation),
     m_chooseNew(false)
 {
-    m_pipeline = new Pipeline(vidIx, this->m_contextId, m_videoLocation, this);
+    m_pipeline = new Pipeline(vidIx, /*this->m_contextId,*/ m_videoLocation, this);
     QObject::connect(m_pipeline, SIGNAL(newFrameReady(int)), this->parent(), renderer_slot, Qt::QueuedConnection);
     QObject::connect(this, SIGNAL(finished()), this, SLOT(reemitFinished()));
 }

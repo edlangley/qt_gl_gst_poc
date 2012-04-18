@@ -18,7 +18,7 @@
 
 #include "GstGLBufferDef.h"
 #include "gstthread.h"
-//#include "pipeline.h"
+#include "pipeline.h"
 
 #define INERTIA_THRESHOLD       1.0f
 #define INERTIA_FACTOR          0.5f
@@ -34,7 +34,16 @@ typedef enum {
     EModelLast   = 3,
 } EModelType;
 
-
+typedef struct _VidTextureInfo VidTextureInfo;
+struct _VidTextureInfo
+{
+    GLuint texId;
+    GstBuffer *buffer;
+    bool texInfoValid;
+    int width;
+    int height;
+    ColFormat colourFormat;
+};
 
 class GLWidget : public QGLWidget
 {
@@ -93,10 +102,11 @@ private:
 
     int getCallingGstVecIx(int vidIx);
     QVector<QString> videoLoc;
-    QVector<GstThread*>gst_threads;
+    QVector<GstThread*>gstThreads;
     bool closing;
-    GLContextID ctx;
-    GstGLBuffer *frame;
+    //GLContextID ctx;
+    //GstGLBuffer *frame;
+    QVector<VidTextureInfo> vidTextures;
 
     //make this generic shortly:
     QGLShaderProgram brickProg;
