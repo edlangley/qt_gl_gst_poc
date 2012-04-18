@@ -1,0 +1,8 @@
+Nate Robbins created the original GLM library. He also ported GLUT for
+Windows and has many great examples of OpenGL in
+action. <http://www.xmission.com/~nate/>
+
+The gluiobj, glutobj and game_glutobj programs, as well as the
+blending code, come from GLM_AVL. <http://www.avl.iu.edu/projects/GLM_AVL/>
+
+Frederic Devernay <Frederic.Devernay at m4x dot org> did the rest.
