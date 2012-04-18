@@ -33,8 +33,16 @@ typedef enum
     EModelLast   = 2,
 } EModelType;
 
-typedef struct _VidTextureInfo VidTextureInfo;
-struct _VidTextureInfo
+typedef enum
+{
+    VidShaderFirst = 0,
+    VidShaderNormal = 0,
+    VidShaderColourHilight = 1,
+    VidShaderAlphaMask = 2,
+    VidShaderLast = 2,
+} VidShaderEffectType;
+
+typedef struct _VidTextureInfo
 {
     GLuint texId;
     GstBuffer *buffer;
@@ -44,8 +52,10 @@ struct _VidTextureInfo
     ColFormat colourFormat;
 //    GLuint textureUnit;
     QGLShaderProgram *shader;
+    VidShaderEffectType effect;
 
-};
+} VidTextureInfo;
+
 
 class GLWidget : public QGLWidget
 {
@@ -64,7 +74,7 @@ public:
 protected:
     void initializeGL();
     void paintGL();
-    void drawSky();
+    //void drawSky();
     void resizeGL(int width, int height);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
@@ -80,25 +90,24 @@ public Q_SLOTS:
     void gstThreadFinished(int vidIx);
 
 private:
+    void setAppropriateVidShader(int vidIx);
+    void setVidShaderVars(int vidIx, bool printErrors);
     int loadShaderFile(QString fileName, QString &shaderSource);
     int setupShader(QGLShaderProgram *prog, QString baseFileName, bool vertNeeded, bool fragNeeded);
-    int printOpenGLError(char *file, int line);
+    int setupShader(QGLShaderProgram *prog, const char *shaderList[], int listLen);
+    int printOpenGLError(const char *file, int line);
     void nextClearColor(void);
+
     // Camera:
-//    int xRot;
-//    int yRot;
-//    int zRot;
-    // FPS mode:
+    // Implement position later if a sky box is desired, and perhaps FPS mode
+//    bool cameraCirclingMode;
+//    float xPos;
+//    float yPos;
+//    float zPos;
     float xRot;
     float yRot;
     float zRot;
-    float xPos;
-    float yPos;
-    float zPos;
-
-    // Circling mode:
     QPoint lastPos;
-    EModelType gleModel;
     int Rotate;
     int xLastIncr;
     int yLastIncr;
@@ -106,13 +115,12 @@ private:
     float fYInertia;
     float fXInertiaOld;
     float fYInertiaOld;
-
-    bool cameraCirclingMode;
-
     // Deprecate:
     GLfloat fScale; // replace with changing zPos
 
+    EModelType currentModel;
     int clearColor;
+    bool stackVidQuads;
 
     int getCallingGstVecIx(int vidIx);
     QVector<QString> videoLoc;
@@ -120,10 +128,18 @@ private:
     bool closing;
     QVector<VidTextureInfo> vidTextures;
 
-    //make this generic shortly:
-    // try storing as individual shaders, then link when needed?
     QGLShaderProgram brickProg;
-    QGLShaderProgram I420ToRGB;
+    QGLShaderProgram I420NoEffect;
+    QGLShaderProgram I420ColourHilight;
+    QGLShaderProgram I420AlphaMask;
+
+    // video shader effects vars - for simplicitys sake make them general to all vids
+    QVector4D ColourHilightRangeMin;
+    QVector4D ColourHilightRangeMax;
+    GLuint alphaTextureId;
+    bool alphaTextureLoaded;
+    GLuint alphaTexWidth;
+    GLuint alphaTexHeight;
 
 signals:
     void xRotationChanged(int angle);
