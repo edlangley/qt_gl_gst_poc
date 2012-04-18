@@ -16,7 +16,7 @@
 
 #include <GL/glut.h>
 
-#include "GstGLBufferDef.h"
+//#include "GstGLBufferDef.h"
 #include "gstthread.h"
 #include "pipeline.h"
 
@@ -25,7 +25,8 @@
 #define SCALE_FACTOR            0.01f
 #define SCALE_INCREMENT         0.5f
 
-typedef enum {
+typedef enum
+{
     EModelFirst  = 0,
     EModelCube   = 0,
     EModelTeapot = 1,
@@ -43,6 +44,9 @@ struct _VidTextureInfo
     int width;
     int height;
     ColFormat colourFormat;
+//    GLuint textureUnit;
+    QGLShaderProgram *shader;
+
 };
 
 class GLWidget : public QGLWidget
@@ -78,9 +82,11 @@ public Q_SLOTS:
 
 private:
     void drawCube(void);
-    int readShaderSource(QString baseFileName);
-    int readShaderFile(QString fileName, QString &shaderSource);
-    int installShaders();
+//    int readShaderSource(QString baseFileName);
+//    int readShaderFile(QString fileName, QString &shaderSource);
+//    int installShaders();
+    int loadShaderFile(QString fileName, QString &shaderSource);
+    int setupShader(QGLShaderProgram *prog, QString baseFileName, bool vertNeeded, bool fragNeeded);
     int printOpenGLError(char *file, int line);
     void nextClearColor(void);
     int xRot;
@@ -97,8 +103,8 @@ private:
     float fXInertiaOld;
     float fYInertiaOld;
     int clearColor;
-    QString vertexShaderSource;
-    QString fragmentShaderSource;
+//    QString vertexShaderSource;
+//    QString fragmentShaderSource;
 
     int getCallingGstVecIx(int vidIx);
     QVector<QString> videoLoc;
@@ -109,7 +115,9 @@ private:
     QVector<VidTextureInfo> vidTextures;
 
     //make this generic shortly:
+    // try storing as individual shaders, then link when needed?
     QGLShaderProgram brickProg;
+    QGLShaderProgram I420ToRGB;
 
 signals:
     void xRotationChanged(int angle);

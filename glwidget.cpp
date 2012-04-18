@@ -4,7 +4,6 @@
 GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     QGLWidget(QGLFormat(QGL::DoubleBuffer | QGL::DepthBuffer | QGL::Rgba), parent),
     closing(false),
-//    frame(NULL),
     brickProg(this)
 {
     xRot = 0;
@@ -89,38 +88,6 @@ void GLWidget::nextClearColor(void)
 
 void GLWidget::initializeGL()
 {
-    // gstreamer shared texture approach:
-#if 0
-    ctx.contextId = glXGetCurrentContext();
-    const char *display_name = getenv("DISPLAY");
-    if(display_name == NULL)
-    {
-        // actually we should look for --display command line parameter here
-        display_name = ":0.0";
-    }
-    ctx.display = XOpenDisplay(display_name);
-    ctx.wnd = this->winId();
-
-    // We need to unset Qt context before initializing gst-gl plugin.
-    // Otherwise the attempt to share gst-gl context with Qt will fail.
-    //this->doneCurrent();
-
-    for(int vidIx = 0; vidIx < this->videoLoc.size(); vidIx++)
-    {
-        this->doneCurrent();
-        this->gstThreads.push_back(new GstThread(vidIx, ctx, this->videoLoc[vidIx], SLOT(newFrame(int)), this));
-        this->makeCurrent();
-        QObject::connect(this->gstThreads[vidIx], SIGNAL(finished(int)),
-                         this, SLOT(gstThreadFinished(int)));
-        QObject::connect(this, SIGNAL(closeRequested()),
-                         this->gstThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
-    }
-#endif
-
-
-
-    // rest of normal gl init:
-
     QString verStr((const char*)glGetString(GL_VERSION));
     QStringList verNums = verStr.split(".");
     std::cout << "GL_VERSION major=" << verNums[0].toStdString() << " minor=" << verNums[1].toStdString() << "\n";
@@ -136,6 +103,7 @@ void GLWidget::initializeGL()
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_RECTANGLE_ARB);
+//    glEnable(GL_TEXTURE_2D);
 #if 0
 // no shader:
     glEnable(GL_CULL_FACE);
@@ -147,13 +115,18 @@ void GLWidget::initializeGL()
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 #else
 // shader:
-    if(readShaderSource("brick") != 0)
-    {
-        qFatal("Error loading shader sources");
-        QApplication::exit( 1);
-    }
+    setupShader(&brickProg, "brick", true, true);
+    // Set up initial uniform values
+    brickProg.setUniformValue("BrickColor", QVector3D(1.0, 0.3, 0.2));
+    brickProg.setUniformValue("MortarColor", QVector3D(0.85, 0.86, 0.84));
+    brickProg.setUniformValue("BrickSize", QVector3D(0.30, 0.15, 0.30));
+    brickProg.setUniformValue("BrickPct", QVector3D(0.90, 0.85, 0.90));
+    brickProg.setUniformValue("LightPosition", QVector3D(0.0, 0.0, 4.0));
+    brickProg.release();
 
-    installShaders();
+    setupShader(&I420ToRGB, "yuv2rgb", false, true);
+    // set uniforms for vid shader along with other stream details when first
+    // frame comes through
 
 #endif
 
@@ -168,7 +141,6 @@ void GLWidget::initializeGL()
         this->vidTextures.push_back(newInfo);
     }
 
-    //this->gst_thread->start();
     for(int vidIx = 0; vidIx < this->gstThreads.size(); vidIx++)
     {
         this->gstThreads[vidIx]->start();
@@ -215,28 +187,26 @@ void GLWidget::paintGL()
     {
         if(this->vidTextures[vidIx].texInfoValid)
         {
-
             // render a quad with the video on it:
+
+            glActiveTexture(GL_TEXTURE0_ARB);
             glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[vidIx].texId);
-            if(glGetError () != GL_NO_ERROR)
+
+            this->vidTextures[vidIx].shader->bind();
+            //this->vidTextures[vidIx].shader->setUniformValue("vidTexture", 0); // texture unit index
+            this->vidTextures[vidIx].shader->setUniformValue("yHeight", (GLfloat)this->vidTextures[vidIx].height);
+            this->vidTextures[vidIx].shader->setUniformValue("yWidth", (GLfloat)this->vidTextures[vidIx].width);
+
+            if(printOpenGLError(__FILE__, __LINE__) != GL_NO_ERROR)
             {
-              qDebug ("failed to bind texture that comes from gst-gl");
-              emit closeRequested();
-              return;
+                qDebug ("failed to bind texture that came from video pipeline");
+                this->closing = true;
+                emit closeRequested();
+                return;
             }
 
             GLfloat width = this->vidTextures[vidIx].width;
             GLfloat height = this->vidTextures[vidIx].height;
-
-            glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S,
-                          GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T,
-                          GL_CLAMP_TO_EDGE);
-            glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-
-            //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             glPushMatrix();
             glRotatef((360/this->vidTextures.size())*vidIx, 0.0, 1.0, 0.0);
@@ -277,10 +247,6 @@ void GLWidget::resizeGL(int wid, int ht)
 
 void GLWidget::newFrame(int vidIx)
 {
-    // use sender() to get correct thread instance
-//    GstThread *callingGstThread = qobject_cast<GstThread*>(sender());
-//    Pipeline *pipeline = callingGstThread->getPipeline();
-
     if(this->gstThreads[vidIx])
     {
 
@@ -288,12 +254,13 @@ void GLWidget::newFrame(int vidIx)
         if(!pipeline)
           return;
 
-        /* frame is initialized as null */
-        //if (this->frame)
+        /* vid frame pointer is initialized as null */
         if (this->vidTextures[vidIx].buffer)
             pipeline->queue_output_buf.put(this->vidTextures[vidIx].buffer);
 
         this->vidTextures[vidIx].buffer = pipeline->queue_input_buf.get();
+
+        this->makeCurrent();
 
         // load the gst buf into a texture
         if(this->vidTextures[vidIx].texInfoValid == false)
@@ -304,18 +271,44 @@ void GLWidget::newFrame(int vidIx)
             this->vidTextures[vidIx].height = pipeline->getHeight();
             this->vidTextures[vidIx].colourFormat = pipeline->getColourFormat();
             this->vidTextures[vidIx].texInfoValid = true;
+
+            //this->vidTextures[vidIx].textureUnit = GL_TEXTURE0 + vidIx;
+            // replace with <choose the right shader for yuv layout> function
+            this->vidTextures[vidIx].shader = &I420ToRGB;
+            printOpenGLError(__FILE__, __LINE__);
+
+            this->vidTextures[vidIx].shader->bind();
+            printOpenGLError(__FILE__, __LINE__);
+            // setting these here will have no effect,
+            // but do it to check for errors, so we don't need to check on every render
+            // and program output doesn't go mad
+            this->vidTextures[vidIx].shader->setUniformValue("vidTexture", 0); // texture unit index
+            printOpenGLError(__FILE__, __LINE__);
+            this->vidTextures[vidIx].shader->setUniformValue("yHeight", (GLfloat)this->vidTextures[vidIx].height);
+            this->vidTextures[vidIx].shader->setUniformValue("yWidth", (GLfloat)this->vidTextures[vidIx].width);
+            printOpenGLError(__FILE__, __LINE__);
+
         }
 
+
+        glBindTexture (GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[vidIx].texId);
+
+        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+        GLsizei test = 1.5f*this->vidTextures[vidIx].height;
         // TODO: move gst macro into pipeline class, have queue contain just pointer
         // to actual frame data
-        glBindTexture (GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[vidIx].texId);
-        glTexParameteri (GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri (GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexImage2D  (GL_TEXTURE_RECTANGLE_ARB, 0, 1,
+        glTexImage2D  (GL_TEXTURE_RECTANGLE_ARB, 0, GL_LUMINANCE,
                        this->vidTextures[vidIx].width,
-                       this->vidTextures[vidIx].height,
+                       1.5f*this->vidTextures[vidIx].height,
                        0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
                        GST_BUFFER_DATA(this->vidTextures[vidIx].buffer));
+
+        printOpenGLError(__FILE__, __LINE__);
 
         /* direct call to paintGL (no queued) */
         this->updateGL();
@@ -324,22 +317,6 @@ void GLWidget::newFrame(int vidIx)
 
 void GLWidget::gstThreadFinished(int vidIx)
 {
-/*
-    GstThread *callingGstThread = qobject_cast<GstThread*>(sender());
-    bool threadIxFound = false;
-    int vidIx;
-
-    for(vidIx = 0; vidIx < this->gstThreads.size(); vidIx++)
-    {
-        if(callingGstThread == this->gstThreads[vidIx])
-        {
-            threadIxFound = true;
-            break;
-        }
-    }
-*/
-
-
     if(this->closing)
     {
         delete(this->gstThreads[vidIx]);
@@ -566,7 +543,7 @@ void GLWidget::closeEvent(QCloseEvent* event)
         this->closing = true;
         emit closeRequested();
 
-        // just in case, check now if any gst threads still exist, if not, close now
+        // just in case, check now if any gst threads still exist, if not, close application now
         bool allFinished = true;
         for(int i = 0; i < this->gstThreads.size(); i++)
         {
@@ -678,25 +655,7 @@ void GLWidget::drawCube(void)
     glEnd();
 }
 
-
-int GLWidget::readShaderSource(QString baseFileName)
-{
-    int ret;
-
-    QString vertFileName = baseFileName + ".vert";
-    ret = readShaderFile(vertFileName, vertexShaderSource);
-    if(ret != 0)
-    {
-        return ret;
-    }
-
-    QString fragFileName = baseFileName + ".frag";
-    ret = readShaderFile(fragFileName, fragmentShaderSource);
-
-    return ret;
-}
-
-int GLWidget::readShaderFile(QString fileName, QString &shaderSource)
+int GLWidget::loadShaderFile(QString fileName, QString &shaderSource)
 {
     shaderSource.clear();
     QFile file(fileName);
@@ -716,53 +675,64 @@ int GLWidget::readShaderFile(QString fileName, QString &shaderSource)
     return 0;
 }
 
-int GLWidget::installShaders()
+int GLWidget::setupShader(QGLShaderProgram *prog, QString baseFileName, bool vertNeeded, bool fragNeeded)
 {
     bool ret;
-    //QGLShaderProgram brickProg(this);
 
-    ret = brickProg.addShaderFromSourceCode(QGLShader::Vertex,
-                                          vertexShaderSource);
+    if(vertNeeded)
+    {
+        QString vertexShaderSource;
+        ret = loadShaderFile(baseFileName+".vert", vertexShaderSource);
+        if(ret != 0)
+        {
+            return ret;
+        }
+
+        ret = prog->addShaderFromSourceCode(QGLShader::Vertex,
+                                              vertexShaderSource);
+        printOpenGLError(__FILE__, __LINE__);
+        if(ret == false)
+        {
+            qCritical() << "vertex shader log: " << prog->log();
+            return -1;
+        }
+    }
+
+    if(fragNeeded)
+    {
+        QString fragmentShaderSource;
+        ret = loadShaderFile(baseFileName+".frag", fragmentShaderSource);
+        if(ret != 0)
+        {
+            return ret;
+        }
+
+        ret = prog->addShaderFromSourceCode(QGLShader::Fragment,
+                                              fragmentShaderSource);
+        printOpenGLError(__FILE__, __LINE__);
+        if(ret == false)
+        {
+            qCritical() << "fragment shader log: " << prog->log();
+            return -1;
+        }
+    }
+
+    ret = prog->link();
     printOpenGLError(__FILE__, __LINE__);
     if(ret == false)
     {
-        qCritical() << "vertex shader log: " << brickProg.log();
+        qCritical() << "shader program link log: " << prog->log();
         return -1;
     }
 
-    ret = brickProg.addShaderFromSourceCode(QGLShader::Fragment,
-                                          fragmentShaderSource);
-    printOpenGLError(__FILE__, __LINE__);
-    if(ret == false)
-    {
-        qCritical() << "fragment shader log: " << brickProg.log();
-        return -1;
-    }
-
-    ret = brickProg.link();
-    printOpenGLError(__FILE__, __LINE__);
-    if(ret == false)
-    {
-        qCritical() << "shader program link log: " << brickProg.log();
-        return -1;
-    }
-
-    ret = brickProg.bind();
+    ret = prog->bind();
     printOpenGLError(__FILE__, __LINE__);
     if(ret == false)
     {
         return -1;
     }
 
-    // Set up initial uniform values
 
-    brickProg.setUniformValue("BrickColor", QVector3D(1.0, 0.3, 0.2));
-    brickProg.setUniformValue("MortarColor", QVector3D(0.85, 0.86, 0.84));
-    brickProg.setUniformValue("BrickSize", QVector3D(0.30, 0.15, 0.30));
-    brickProg.setUniformValue("BrickPct", QVector3D(0.90, 0.85, 0.90));
-    brickProg.setUniformValue("LightPosition", QVector3D(0.0, 0.0, 4.0));
-
-    brickProg.release();
 
     return 0;
 }

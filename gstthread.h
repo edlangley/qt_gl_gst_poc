@@ -23,7 +23,7 @@
 #define GSTTHREAD_H
 
 #include <QtCore/QThread>
-#include "glcontextid.h"
+//#include "glcontextid.h"
 
 class Pipeline;
 

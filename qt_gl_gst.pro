@@ -22,8 +22,6 @@ HEADERS  += \
     glwidget.h \
     pipeline.h \
     gstthread.h \
-    GstGLBufferDef.h \
-    glcontextid.h \
     AsyncQueue.h
 
 LIBS += -lglut \
@@ -42,4 +40,3 @@ INCLUDEPATH += /usr/include/gstreamer-0.10 \
     /usr/include/glib-2.0 \
     /usr/lib/i386-linux-gnu/glib-2.0/include \
     /usr/include/libxml2
-
