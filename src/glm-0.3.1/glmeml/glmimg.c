@@ -17,10 +17,10 @@
 #include <GL/glext.h>
 #endif
 #include "glm.h"
-/*
+
 #define DEBUG
 #define GLDEBUG
-*/
+
 #include "glmint.h"
 
 
@@ -78,7 +78,7 @@ static void glmImgInit(void)
         gl_max_texture_size = GLM_MAX_TEXTURE_SIZE;
 #endif
     //return;
-#if 0				/* rectangle textures */
+#if 1				/* rectangle textures */
 #ifdef GL_TEXTURE_RECTANGLE_ARB
     if (glmIsExtensionSupported("GL_ARB_texture_rectangle")) {
 	DBG_(__glmWarning("glmImgInit(): GL_ARB_texture_rectangle is available"));

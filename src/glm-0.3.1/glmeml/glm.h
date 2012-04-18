@@ -132,6 +132,10 @@ typedef struct _GLMmodel {
 
   GLfloat position[3];          /* position of the model */
 
+  /* EML additions */
+  GLuint       usespecifictexid; /* boolean flag */
+  GLuint       specifictexid;
+
 } GLMmodel;
 
 
@@ -256,6 +260,15 @@ glmReadOBJ(const char* filename);
  */
 GLvoid
 glmWriteOBJ(GLMmodel* model, char* filename, GLuint mode);
+
+/* glmUseOtherTexId: Use a specific texture ID set up in the OpenGL
+ * context to render the model.
+ *
+ * model - initialized GLMmodel structure
+ * texid - texture ID which is valid in the current OpenGL context
+ */
+GLvoid
+glmUseOtherTexId(GLMmodel* model, GLuint enable, GLuint texid);
 
 /* glmDraw: Renders the model to the current OpenGL context using the
  * mode specified.

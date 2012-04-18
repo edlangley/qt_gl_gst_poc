@@ -1,4 +1,4 @@
-AC_INIT(glm,0.3.1)
+AC_INIT(glmeml,0.3.1)
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE
 
@@ -170,7 +170,7 @@ AM_CONDITIONAL(HAVE_SDL_IMAGE, test "x$SDL_IMAGELIBS" != x)
 AC_SUBST(SUPPORT_LIBS)
 
 AC_OUTPUT([ Makefile
-glm/Makefile
+glmeml/Makefile
 examples/Makefile
 m4/Makefile
 glm.spec

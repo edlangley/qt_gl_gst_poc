@@ -1,8 +1,8 @@
-%define name glm
+%define name glmeml
 %define version 0.3.1
 %define release 1
 
-%define name_devel glm-devel
+%define name_devel glmeml-devel
 
 Summary: Alias Wavefront OBJ File Reader/Viewer Library
 Name: %name
@@ -16,18 +16,18 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: glut-devel
 
 %description
-glm is an Alias Wavefront OBJ File Reader/Viewer Library.
+glmeml is an Alias Wavefront OBJ File Reader/Viewer Library.
 
 %package -n %name_devel
-Summary: Development components for glm
+Summary: Development components for glmeml
 Group: System/Libraries
 Requires: %name = %version-%release
-Provides: glm-devel = %version-%release
+Provides: glmeml-devel = %version-%release
 
 %description -n %name_devel
-glm is an Alias Wavefront OBJ File Reader/Viewer Library.
+glmeml is an Alias Wavefront OBJ File Reader/Viewer Library.
 
-This archive contains the header-files for glm development
+This archive contains the header-files for glmeml development
 
 %prep
 %setup -q

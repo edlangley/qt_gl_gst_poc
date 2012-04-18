@@ -34,10 +34,10 @@
 #include <string.h>
 #include <assert.h>
 #include "glm.h"
-/*
+
 #define DEBUG
 #define GLDEBUG
-*/
+
 #include "glmint.h"
 
 #define T(x) (model->triangles[(x)])
@@ -1575,6 +1575,9 @@ glmReadOBJ(const char* filename)
     model->position[0]   = 0.0;
     model->position[1]   = 0.0;
     model->position[2]   = 0.0;
+
+    model->usespecifictexid = 0;
+    model->specifictexid = 0;
     
     /* make a first pass through the file to get a count of the number
        of vertices, normals, texcoords & triangles */
@@ -1828,6 +1831,21 @@ glmWriteOBJ(GLMmodel* model, char* filename, GLuint mode)
     fclose(file);
 }
 
+
+/* glmUseOtherTexId: Use a specific texture ID set up in the OpenGL
+ * context to render the model.
+ *
+ * model - initialized GLMmodel structure
+ * texid - texture ID which is valid in the current OpenGL context
+ */
+GLvoid
+glmUseOtherTexId(GLMmodel* model, GLuint enable, GLuint texid)
+{
+    model->specifictexid = texid;
+    model->usespecifictexid = enable;
+}
+
+
 /* glmDraw: Renders the model to the current OpenGL context using the
  * mode specified.
  *
@@ -1964,10 +1982,19 @@ glmDraw(GLMmodel* model, GLuint mode)
 			    if(newtexture) {
 				newtexture = 0;
 				glEnd();
-				if(map_diffuse == -1)
-				    glBindTexture(_glmTextureTarget, 0);
+		/* EL hacked this up to map some video over model instead of proper texture		
+		*/		if(model->usespecifictexid)
+				{
+				    glBindTexture(_glmTextureTarget, model->specifictexid);
+				}
 				else
-				    glBindTexture(_glmTextureTarget, model->textures[map_diffuse].id);
+				{
+				    if(map_diffuse == -1)
+					glBindTexture(_glmTextureTarget, 0);
+				    else
+					glBindTexture(_glmTextureTarget, model->textures[map_diffuse].id);
+				}
+
 				glBegin(GL_TRIANGLES);
 			    }
 			}
