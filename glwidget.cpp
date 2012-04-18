@@ -1,5 +1,4 @@
 #include "glwidget.h"
-//#include "pipeline.h"
 
 GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     QGLWidget(QGLFormat(QGL::DoubleBuffer | QGL::DepthBuffer | QGL::Rgba), parent),
@@ -92,18 +91,19 @@ void GLWidget::initializeGL()
     QStringList verNums = verStr.split(".");
     std::cout << "GL_VERSION major=" << verNums[0].toStdString() << " minor=" << verNums[1].toStdString() << "\n";
 
-    if (verNums[0].toInt() < 2)
+    if(verNums[0].toInt() < 2)
     {
-     printf("Support for OpenGL 2.0 is required for this demo...exiting\n");
-     exit(1);
+        qCritical("Support for OpenGL 2.0 is required for this demo...exiting\n");
+        close();
     }
+
+    std::cout << "Window is" << ((this->format().doubleBuffer()) ? "": " not") << " double buffered\n";
 
     qglClearColor(QColor(Qt::black));
 
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_RECTANGLE_ARB);
-//    glEnable(GL_TEXTURE_2D);
 #if 0
 // no shader:
     glEnable(GL_CULL_FACE);
@@ -146,9 +146,101 @@ void GLWidget::initializeGL()
         this->gstThreads[vidIx]->start();
     }
 }
+#if 0
+void GLWidget::drawSky()
+{
+    glPushMatrix();
 
+    // Reset and transform the matrix.
+    glLoadIdentity();
+//    gluLookAt(
+//        0,0,0,
+//        0,0,0//camera->x(),camera->y(),camera->z(),
+//        0,1,0);
+
+    // apply just the camera rotation
+    glRotatef(xRot / 16.0, 1.0, 0.0, 0.0);
+    glRotatef(yRot / 16.0, 0.0, 1.0, 0.0);
+    glRotatef(zRot / 16.0, 0.0, 0.0, 1.0);
+
+    // Enable/Disable features
+    glPushAttrib(GL_ENABLE_BIT);
+    glEnable(GL_TEXTURE_2D);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_BLEND);
+
+    // Just in case we set all vertices to white.
+    glColor4f(1,1,1,1);
+
+    // Render the front quad
+    glBindTexture(GL_TEXTURE_2D, _skybox[0]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
+        glTexCoord2f(1, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
+        glTexCoord2f(1, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
+        glTexCoord2f(0, 1); glVertex3f(  0.5f,  0.5f, -0.5f );
+    glEnd();
+
+    // Render the left quad
+    glBindTexture(GL_TEXTURE_2D, _skybox[1]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f(  0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
+        glTexCoord2f(1, 1); glVertex3f(  0.5f,  0.5f, -0.5f );
+        glTexCoord2f(0, 1); glVertex3f(  0.5f,  0.5f,  0.5f );
+    glEnd();
+
+    // Render the back quad
+    glBindTexture(GL_TEXTURE_2D, _skybox[2]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 1); glVertex3f(  0.5f,  0.5f,  0.5f );
+        glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f,  0.5f );
+
+    glEnd();
+
+    // Render the right quad
+    glBindTexture(GL_TEXTURE_2D, _skybox[3]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
+        glTexCoord2f(1, 0); glVertex3f( -0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 1); glVertex3f( -0.5f,  0.5f,  0.5f );
+        glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
+    glEnd();
+
+    // Render the top quad
+    glBindTexture(GL_TEXTURE_2D, _skybox[4]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
+        glTexCoord2f(0, 0); glVertex3f( -0.5f,  0.5f,  0.5f );
+        glTexCoord2f(1, 0); glVertex3f(  0.5f,  0.5f,  0.5f );
+        glTexCoord2f(1, 1); glVertex3f(  0.5f,  0.5f, -0.5f );
+    glEnd();
+
+    // Render the bottom quad
+    glBindTexture(GL_TEXTURE_2D, _skybox[5]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
+        glTexCoord2f(0, 1); glVertex3f( -0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 1); glVertex3f(  0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
+    glEnd();
+
+    // Restore enable bits and matrix
+    glPopAttrib();
+    glPopMatrix();
+
+}
+#endif
 void GLWidget::paintGL()
 {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Draw a gradiented background
+    //drawSky();
+
     glLoadIdentity();
     glTranslatef(0.0, 0.0, -5.0);
 
@@ -158,8 +250,12 @@ void GLWidget::paintGL()
 
     glScalef(fScale, fScale, fScale);
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+    // Draw a big green liney grid
+
+
+    // Draw an object in the middle
     brickProg.bind();
 
     switch( gleModel )
@@ -173,16 +269,15 @@ void GLWidget::paintGL()
         case EModelSphere:
             glutSolidSphere(0.6f, 64, 64);
             break;
-        case EModelCube:
-            drawCube();
-            break;
         default:
-            drawCube();
+            glutSolidTeapot(0.6f);
             break;
     }
 
     brickProg.release();
 
+
+    // Draw videos around the object
     for(int vidIx = 0; vidIx < this->vidTextures.size(); vidIx++)
     {
         if(this->vidTextures[vidIx].texInfoValid)
@@ -210,12 +305,19 @@ void GLWidget::paintGL()
 
             glPushMatrix();
             glRotatef((360/this->vidTextures.size())*vidIx, 0.0, 1.0, 0.0);
+            glTranslatef(0.0, 0.0, 2.0);
 
             glBegin(GL_QUADS);
+                glTexCoord2f(width, 0.0f); glVertex2f(-1.3f, 1.0f);
+                glTexCoord2f(0.0f, 0.0f); glVertex2f( 1.3f, 1.0f);
+                glTexCoord2f(0.0f, height); glVertex2f( 1.3f, -1.0f);
+                glTexCoord2f(width, height); glVertex2f(-1.3f, -1.0f);
+            /*
                 glTexCoord2f(width, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);
                 glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);
                 glTexCoord2f(0.0f, height); glVertex3f( 1.0f,  1.0f,  1.0f);
                 glTexCoord2f(width, height); glVertex3f(-1.0f,  1.0f,  1.0f);
+            */
             glEnd();
             glPopMatrix();
         }
@@ -232,13 +334,8 @@ void GLWidget::resizeGL(int wid, int ht)
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-    glViewport(0, 0, wid, ht);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-
     //glOrtho(-1.0, 1.0, -1.0, 1.0, -10.0, 10.0);
-    glFrustum(-vp, vp, -vp / aspect, vp / aspect, 3, 10.0);
+    glFrustum(-vp, vp, -vp / aspect, vp / aspect, 1.0, 50.0);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -559,100 +656,6 @@ void GLWidget::closeEvent(QCloseEvent* event)
         }
         event->ignore();
     }
-}
-
-void GLWidget::drawCube(void)
-{
-    float size = 1.0f;
-    float scale = 0.2f;
-    float delta = 0.1f;
-
-    float A[3] = { size,  size,  size * scale + delta };
-    float B[3] = { size,  size, -size * scale + delta };
-    float C[3] = { size, -size, -size * scale };
-    float D[3] = { size, -size,  size * scale };
-    float E[3] = {-size,  size,  size * scale + delta };
-    float F[3] = {-size,  size, -size * scale + delta };
-    float G[3] = {-size, -size, -size * scale };
-    float H[3] = {-size, -size,  size * scale };
-
-    float I[3] = { 1.0f,  0.0f,  0.0f};
-    float K[3] = {-1.0f,  0.0f,  0.0f};
-    float L[3] = { 0.0f,  0.0f, -1.0f};
-    float M[3] = { 0.0f,  0.0f,  1.0f};
-    float N[3] = { 0.0f,  1.0f,  0.0f};
-    float O[3] = { 0.0f, -1.0f,  0.0f};
-
-
-    glBegin(GL_QUADS);
-
-    glNormal3fv(I);
-
-    glTexCoord2f(1,1);
-    glVertex3fv(D);
-    glTexCoord2f(0,1);
-    glVertex3fv(C);
-    glTexCoord2f(0,0);
-    glVertex3fv(B);
-    glTexCoord2f(1,0);
-    glVertex3fv(A);
-
-    glNormal3fv(K);
-
-    glTexCoord2f(1,1);
-    glVertex3fv(G);
-    glTexCoord2f(0,1);
-    glVertex3fv(H);
-    glTexCoord2f(0,0);
-    glVertex3fv(E);
-    glTexCoord2f(1,0);
-    glVertex3fv(F);
-
-    glNormal3fv(L);
-
-    glTexCoord2f(1,1);
-    glVertex3fv(C);
-    glTexCoord2f(0,1);
-    glVertex3fv(G);
-    glTexCoord2f(0,0);
-    glVertex3fv(F);
-    glTexCoord2f(1,0);
-    glVertex3fv(B);
-
-    glNormal3fv(M);
-
-    glTexCoord2f(1,1);
-    glVertex3fv(H);
-    glTexCoord2f(0,1);
-    glVertex3fv(D);
-    glTexCoord2f(0,0);
-    glVertex3fv(A);
-    glTexCoord2f(1,0);
-    glVertex3fv(E);
-
-    glNormal3fv(N);
-
-    glTexCoord2f(1,1);
-    glVertex3fv(E);
-    glTexCoord2f(0,1);
-    glVertex3fv(A);
-    glTexCoord2f(0,0);
-    glVertex3fv(B);
-    glTexCoord2f(1,0);
-    glVertex3fv(F);
-
-    glNormal3fv(O);
-
-    glTexCoord2f(1,1);
-    glVertex3fv(G);
-    glTexCoord2f(0,1);
-    glVertex3fv(C);
-    glTexCoord2f(0,0);
-    glVertex3fv(D);
-    glTexCoord2f(1,0);
-    glVertex3fv(H);
-
-    glEnd();
 }
 
 int GLWidget::loadShaderFile(QString fileName, QString &shaderSource)

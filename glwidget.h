@@ -16,7 +16,6 @@
 
 #include <GL/glut.h>
 
-//#include "GstGLBufferDef.h"
 #include "gstthread.h"
 #include "pipeline.h"
 
@@ -28,11 +27,10 @@
 typedef enum
 {
     EModelFirst  = 0,
-    EModelCube   = 0,
-    EModelTeapot = 1,
-    EModelSphere = 2,
-    EModelTorus  = 3,
-    EModelLast   = 3,
+    EModelTeapot = 0,
+    EModelSphere = 1,
+    EModelTorus  = 2,
+    EModelLast   = 2,
 } EModelType;
 
 typedef struct _VidTextureInfo VidTextureInfo;
@@ -66,6 +64,7 @@ public:
 protected:
     void initializeGL();
     void paintGL();
+    void drawSky();
     void resizeGL(int width, int height);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
@@ -81,18 +80,23 @@ public Q_SLOTS:
     void gstThreadFinished(int vidIx);
 
 private:
-    void drawCube(void);
-//    int readShaderSource(QString baseFileName);
-//    int readShaderFile(QString fileName, QString &shaderSource);
-//    int installShaders();
     int loadShaderFile(QString fileName, QString &shaderSource);
     int setupShader(QGLShaderProgram *prog, QString baseFileName, bool vertNeeded, bool fragNeeded);
     int printOpenGLError(char *file, int line);
     void nextClearColor(void);
-    int xRot;
-    int yRot;
-    int zRot;
-    GLfloat fScale;
+    // Camera:
+//    int xRot;
+//    int yRot;
+//    int zRot;
+    // FPS mode:
+    float xRot;
+    float yRot;
+    float zRot;
+    float xPos;
+    float yPos;
+    float zPos;
+
+    // Circling mode:
     QPoint lastPos;
     EModelType gleModel;
     int Rotate;
@@ -102,16 +106,18 @@ private:
     float fYInertia;
     float fXInertiaOld;
     float fYInertiaOld;
+
+    bool cameraCirclingMode;
+
+    // Deprecate:
+    GLfloat fScale; // replace with changing zPos
+
     int clearColor;
-//    QString vertexShaderSource;
-//    QString fragmentShaderSource;
 
     int getCallingGstVecIx(int vidIx);
     QVector<QString> videoLoc;
     QVector<GstThread*>gstThreads;
     bool closing;
-    //GLContextID ctx;
-    //GstGLBuffer *frame;
     QVector<VidTextureInfo> vidTextures;
 
     //make this generic shortly:
