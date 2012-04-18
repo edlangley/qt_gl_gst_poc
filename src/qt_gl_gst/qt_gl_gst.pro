@@ -40,3 +40,12 @@ INCLUDEPATH += /usr/include/gstreamer-0.10 \
     /usr/include/glib-2.0 \
     /usr/lib/i386-linux-gnu/glib-2.0/include \
     /usr/include/libxml2
+
+# GLM wavefront obj model loading, with control over texture ID used :
+LIBS += -L. -lglmeml \
+    -lm \
+    -ljpeg \
+    -lpng \
+    -lz
+INCLUDEPATH += .
+

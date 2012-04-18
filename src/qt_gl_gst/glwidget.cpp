@@ -8,20 +8,19 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     xRot = 0;
     yRot = 0;
     zRot = 0;
-
     fScale = 1.0;
     lastPos = QPoint(0, 0);
-    currentModel = EModelFirst;
-    //currentVidShader = VidShaderFirst;
-    clearColor = 0;
-    stackVidQuads = false;
-
 
     Rotate = 1;
     xLastIncr = 0;
     yLastIncr = 0;
     fXInertia = -0.5;
     fYInertia = 0;
+
+    clearColor = 0;
+    stackVidQuads = false;
+//    vidOnObject = false;
+    currentModelEffect = ModelEffectFirst;
 
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(animate()));
@@ -52,6 +51,9 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
         QObject::connect(this, SIGNAL(closeRequested()),
                          this->gstThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
     }
+
+    currentModel = ModelFirst;
+    objModel = NULL;
 }
 
 GLWidget::~GLWidget()
@@ -103,16 +105,39 @@ void GLWidget::initializeGL()
     glEnable (GL_BLEND);
     glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-#if 0
+#if 1//0
 // no shader:
-    glEnable(GL_CULL_FACE);
+
+    /* Lighting Variables */
+    GLfloat light_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
+    GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 };
+
+    GLfloat mat_ambient[] = { 0.7, 0.7, 0.7, 1.0 };
+    GLfloat mat_diffuse[] = { 0.8, 0.8, 0.8, 1.0 };
+    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat high_shininess[] = { 100.0 };
+
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+    glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+    glMaterialfv(GL_FRONT, GL_SHININESS, high_shininess);
+
+    //glEnable(GL_CULL_FACE);
     glShadeModel(GL_SMOOTH);
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glEnable(GL_MULTISAMPLE);
     static GLfloat lightPosition[4] = { 0.5, 5.0, 7.0, 1.0 };
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-#else
+    glEnable(GL_NORMALIZE);
+//#else
 // shader:
     setupShader(&brickProg, "shaders/brick", true, true);
     // Set up initial uniform values
@@ -130,9 +155,6 @@ void GLWidget::initializeGL()
 
     // set uniforms for vid shaders along with other stream details when first
     // frame comes through
-
-
-
 #endif
 
     // Create entry in tex info vector for all pipelines
@@ -151,13 +173,30 @@ void GLWidget::initializeGL()
     {
         this->gstThreads[vidIx]->start();
     }
+
+
+
+    objModel = glmReadOBJ(DFLT_OBJ_MODEL_FILE_NAME);
+    printOpenGLError(__FILE__, __LINE__);
+    if (!objModel)
+    {
+        qCritical() << "Couldn't load obj model file " << DFLT_OBJ_MODEL_FILE_NAME;
+        currentModel = (ModelType) ((int) currentModel + 1);
+    }
+    else
+    {
+        glmUnitize(objModel);
+        printOpenGLError(__FILE__, __LINE__);
+        glmVertexNormals(objModel, 90.0, GL_TRUE);
+        printOpenGLError(__FILE__, __LINE__);
+    }
 }
 
 void GLWidget::paintGL()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Draw a gradiented background - nah
+    // Draw a sky box - nah
     //drawSky();
 
     glLoadIdentity();
@@ -171,17 +210,54 @@ void GLWidget::paintGL()
 
 
     // Draw an object in the middle
-    brickProg.bind();
+    ModelEffectType enabledModelEffect = currentModelEffect;
+    switch(enabledModelEffect)
+    {
+    case ModelEffectNone:
+        glmUseOtherTexId(objModel, 0, 0);
+        //glUseProgram(0);
+        brickProg.release();
+        break;
+    case ModelEffectBrick:
+        brickProg.bind();
+        break;
+    case ModelEffectVideo:
+        glActiveTexture(GL_TEXTURE0_ARB);
+        //glEnable(GL_TEXTURE_RECTANGLE_ARB);
+        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[0].texId);
 
+        this->vidTextures[0].shader->bind();
+        setVidShaderVars(0, false);
+
+        glmUseOtherTexId(objModel, 1, this->vidTextures[0].texId);
+        break;
+    }
+ #if 0
+    if(vidOnObject)
+    {
+        glActiveTexture(GL_TEXTURE0_ARB);
+        glEnable(GL_TEXTURE_RECTANGLE_ARB);
+        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[0].texId);
+
+        this->vidTextures[0].shader->bind();
+        setVidShaderVars(0, false);
+    }
+    else
+        brickProg.bind();
+#endif
     switch( currentModel )
     {
-        case EModelTeapot:
+        case ModelLoadedObj:
+            glmDraw(objModel, GLM_SMOOTH | GLM_MATERIAL | GLM_TEXTURE);
+            printOpenGLError(__FILE__, __LINE__);
+            break;
+        case ModelTeapot:
             glutSolidTeapot(0.6f);
             break;
-        case EModelTorus:
+        case ModelTorus:
             glutSolidTorus(0.2f, 0.6f, 64, 64);
             break;
-        case EModelSphere:
+        case ModelSphere:
             glutSolidSphere(0.6f, 64, 64);
             break;
         default:
@@ -189,8 +265,23 @@ void GLWidget::paintGL()
             break;
     }
 
-    brickProg.release();
-
+    switch(enabledModelEffect)
+    {
+    case ModelEffectNone:
+        break;
+    case ModelEffectBrick:
+        brickProg.release();
+        break;
+    case ModelEffectVideo:
+        printOpenGLError(__FILE__, __LINE__);
+        break;
+    }
+#if 0
+    if(vidOnObject)
+        printOpenGLError(__FILE__, __LINE__);
+    else
+        brickProg.release();
+#endif
 
     // Draw videos around the object
     for(int vidIx = 0; vidIx < this->vidTextures.size(); vidIx++)
@@ -200,28 +291,22 @@ void GLWidget::paintGL()
             // render a quad with the video on it:
 
             glActiveTexture(GL_TEXTURE0_ARB);
-            glEnable(GL_TEXTURE_RECTANGLE_ARB);
+            //glEnable(GL_TEXTURE_RECTANGLE_ARB);
             glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[vidIx].texId);
+            printOpenGLError(__FILE__, __LINE__);
 
             if((this->vidTextures[vidIx].effect == VidShaderAlphaMask) && this->alphaTextureLoaded)
             {
+                glEnable (GL_BLEND);
+                glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 glActiveTexture(GL_TEXTURE1_ARB);
-                glEnable(GL_TEXTURE_RECTANGLE_ARB);
+                //glEnable(GL_TEXTURE_RECTANGLE_ARB);
                 glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->alphaTextureId);
             }
 
             this->vidTextures[vidIx].shader->bind();
-            //this->vidTextures[vidIx].shader->setUniformValue("yHeight", (GLfloat)this->vidTextures[vidIx].height);
-            //this->vidTextures[vidIx].shader->setUniformValue("yWidth", (GLfloat)this->vidTextures[vidIx].width);
             setVidShaderVars(vidIx, false);
-
-            if(printOpenGLError(__FILE__, __LINE__) != GL_NO_ERROR)
-            {
-                qDebug ("failed to bind texture that came from video pipeline");
-                this->closing = true;
-                emit closeRequested();
-                return;
-            }
+            printOpenGLError(__FILE__, __LINE__);
 
             GLfloat width = this->vidTextures[vidIx].width;
             GLfloat height = this->vidTextures[vidIx].height;
@@ -239,16 +324,6 @@ void GLWidget::paintGL()
             }
 
             glBegin(GL_QUADS);
-            /*
-                glTexCoord2f(width, 0.0f);
-                glVertex2f(-1.3f, 1.0f);
-                glTexCoord2f(0.0f, 0.0f);
-                glVertex2f( 1.3f, 1.0f);
-                glTexCoord2f(0.0f, height);
-                glVertex2f( 1.3f, -1.0f);
-                glTexCoord2f(width, height);
-                glVertex2f(-1.3f, -1.0f);
-            */
                 glMultiTexCoord2fARB(GL_TEXTURE0_ARB, width, 0.0f);
                 glMultiTexCoord2fARB(GL_TEXTURE1_ARB, alphaTexWidth, 0.0f);
                 glVertex2f(-1.3f, 1.0f);
@@ -312,10 +387,6 @@ void GLWidget::newFrame(int vidIx)
             this->vidTextures[vidIx].colourFormat = pipeline->getColourFormat();
             this->vidTextures[vidIx].texInfoValid = true;
 
-            //this->vidTextures[vidIx].textureUnit = GL_TEXTURE0 + vidIx;
-            // replace with <choose the right shader for yuv layout> function
-            //this->vidTextures[vidIx].shader = &I420NoEffect;
-            //printOpenGLError(__FILE__, __LINE__);
             setAppropriateVidShader(vidIx);
 
             this->vidTextures[vidIx].shader->bind();
@@ -323,13 +394,6 @@ void GLWidget::newFrame(int vidIx)
             // Setting shader variables here will have no effect as they are set on every render,
             // but do it to check for errors, so we don't need to check on every render
             // and program output doesn't go mad
-/*
-            this->vidTextures[vidIx].shader->setUniformValue("vidTexture", 0); // texture unit index
-            printOpenGLError(__FILE__, __LINE__);
-            this->vidTextures[vidIx].shader->setUniformValue("yHeight", (GLfloat)this->vidTextures[vidIx].height);
-            this->vidTextures[vidIx].shader->setUniformValue("yWidth", (GLfloat)this->vidTextures[vidIx].width);
-            printOpenGLError(__FILE__, __LINE__);
-*/
             setVidShaderVars(vidIx, true);
         }
 
@@ -342,7 +406,6 @@ void GLWidget::newFrame(int vidIx)
         glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-        //GLsizei test = 1.5f*this->vidTextures[vidIx].height;
         // TODO: move gst macro into pipeline class, have queue contain just pointer
         // to actual frame data
         glTexImage2D  (GL_TEXTURE_RECTANGLE_ARB, 0, GL_LUMINANCE,
@@ -393,6 +456,8 @@ void GLWidget::gstThreadFinished(int vidIx)
     }
     else if(this->gstThreads[vidIx]->chooseNew())
     {
+        // TODO: call a choosenewvid function here and do that from keyboard event handler if pipeline already stopped
+
         // Confirm that we have the new filename before we do anything else
         QString newFileName = QFileDialog::getOpenFileName(0, "Select a video file",
                                                            ".", "Videos (*.avi *.mkv *.ogg *.asf *.mov);;All (*.*)");
@@ -418,7 +483,7 @@ void GLWidget::gstThreadFinished(int vidIx)
     }
     else
     {
-        // for now should just stop at last frame?
+        // TODO: restart video
     }
 }
 
@@ -541,14 +606,37 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
 {
     switch(e->key())
     {
+        case Qt::Key_Question:
+        case Qt::Key_H:
+            std::cout <<  "\nKeyboard commands:\n\n"
+                          "? - Help\n"
+                          "q, <esc> - Quit\n"
+                          "b - Toggle among background clear colors\n"
+                          "t - Toggle among models to render\n"
+                          "s - "
+                          "a - "
+                          "v - "
+                          "o - "
+                          "p - "
+                          "<home>     - reset zoom and rotation\n"
+                          "<space> or <click>        - stop rotation\n"
+                          "<+>, <-> or <ctrl + drag> - zoom model\n"
+                          "<arrow keys> or <drag>    - rotate model\n"
+                          "\n";
+            break;
+        case Qt::Key_Escape:
+        case Qt::Key_Q:
+            close();
+            break;
+
         case Qt::Key_B:
             nextClearColor();
             break;
         case Qt::Key_T:
-            if (currentModel >= EModelLast)
-                currentModel = EModelFirst;
+            if (currentModel >= ModelLast)
+                currentModel = ModelFirst;
             else
-                currentModel = (EModelType) ((int) currentModel + 1);
+                currentModel = (ModelType) ((int) currentModel + 1);
             break;
         case Qt::Key_S:
             {
@@ -594,6 +682,48 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
                 }
             }
             break;
+        case Qt::Key_M:
+            {
+                // Load a Wavefront OBJ model file. Get the filename before doing anything else
+                QString objFileName = QFileDialog::getOpenFileName(0, "Select a Wavefront OBJ file",
+                                                                      "./models/", "Wavefront OBJ (*.obj)");
+                if(objFileName.isNull() == false)
+                {
+                    this->makeCurrent();
+
+                    glmDelete(objModel);
+                    objModel = glmReadOBJ(objFileName.toAscii().constData());
+                    if (!objModel)
+                    {
+                        qCritical() << "Couldn't load obj model file " << DFLT_OBJ_MODEL_FILE_NAME;
+                        currentModel = (ModelType) ((int) currentModel + 1);
+                    }
+                    else
+                    {
+                        glmUnitize(objModel);
+                        glmVertexNormals(objModel, 90.0, GL_TRUE);
+                    }
+                }
+            }
+            break;
+        case Qt::Key_V:
+            {
+                int lastVidDrawn = this->vidTextures.size() - 1;
+                this->gstThreads[lastVidDrawn]->setChooseNewOnFinished();
+                this->gstThreads[lastVidDrawn]->stop();
+            }
+            break;
+        case Qt::Key_O:
+            //vidOnObject = !vidOnObject;
+            if (currentModelEffect >= ModelEffectLast)
+                currentModelEffect = ModelEffectFirst;
+            else
+                currentModelEffect = (ModelEffectType) ((int) currentModelEffect + 1);
+            break;
+        case Qt::Key_P:
+            stackVidQuads = !stackVidQuads;
+            break;
+
         case Qt::Key_Space:
             Rotate = !Rotate;
 
@@ -618,18 +748,6 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
         case Qt::Key_Minus:
             fScale -= SCALE_INCREMENT;
             break;
-        case Qt::Key_Question:
-        case Qt::Key_H:
-            std::cout <<  "\nKeyboard commands:\n\n"
-            "b - Toggle among background clear colors\n"
-            "q, <esc> - Quit\n"
-            "t - Toggle among models to render\n"
-            "? - Help\n"
-            "<home>     - reset zoom and rotation\n"
-            "<space> or <click>        - stop rotation\n"
-            "<+>, <-> or <ctrl + drag> - zoom model\n"
-            "<arrow keys> or <drag>    - rotate model\n\n";
-            break;
         case Qt::Key_Home:
             xRot = 0;
             yRot = 35;
@@ -652,20 +770,6 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
         case Qt::Key_Down:
            xRot += 8;
         break;
-
-        case Qt::Key_V:
-            this->gstThreads[0]->setChooseNewOnFinished();
-            this->gstThreads[0]->stop();
-
-        break;
-        case Qt::Key_P:
-            stackVidQuads = !stackVidQuads;
-        break;
-
-        case Qt::Key_Escape:
-        case Qt::Key_Q:
-            close();
-            break;
 
         default:
             QGLWidget::keyPressEvent(e);

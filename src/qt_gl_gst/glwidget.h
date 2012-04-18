@@ -15,6 +15,7 @@
 #include <iostream>
 
 #include <GL/glut.h>
+#include <glm.h>
 
 #include "gstthread.h"
 #include "pipeline.h"
@@ -24,14 +25,26 @@
 #define SCALE_FACTOR            0.01f
 #define SCALE_INCREMENT         0.5f
 
+#define DFLT_OBJ_MODEL_FILE_NAME    "models/sphere.obj"
+
 typedef enum
 {
-    EModelFirst  = 0,
-    EModelTeapot = 0,
-    EModelSphere = 1,
-    EModelTorus  = 2,
-    EModelLast   = 2,
-} EModelType;
+    ModelFirst = 0,
+    ModelLoadedObj = 0,
+    ModelTeapot = 1,
+    ModelSphere = 2,
+    ModelTorus = 3,
+    ModelLast = 3,
+} ModelType;
+
+typedef enum
+{
+    ModelEffectFirst = 0,
+    ModelEffectNone = 0,
+    ModelEffectBrick = 1,
+    ModelEffectVideo = 2,
+    ModelEffectLast = 2,
+} ModelEffectType;
 
 typedef enum
 {
@@ -118,9 +131,10 @@ private:
     // Deprecate:
     GLfloat fScale; // replace with changing zPos
 
-    EModelType currentModel;
     int clearColor;
     bool stackVidQuads;
+    //bool vidOnObject;
+    ModelEffectType currentModelEffect;
 
     int getCallingGstVecIx(int vidIx);
     QVector<QString> videoLoc;
@@ -140,6 +154,9 @@ private:
     bool alphaTextureLoaded;
     GLuint alphaTexWidth;
     GLuint alphaTexHeight;
+
+    ModelType currentModel;
+    GLMmodel *objModel;
 
 signals:
     void xRotationChanged(int angle);
