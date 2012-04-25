@@ -25,7 +25,7 @@
 #define SCALE_FACTOR            0.01f
 #define SCALE_INCREMENT         0.5f
 
-#define DFLT_OBJ_MODEL_FILE_NAME    "models/sphere.obj"
+#define DFLT_OBJ_MODEL_FILE_NAME    "models/glm-data/sphere.obj"
 
 typedef enum
 {
