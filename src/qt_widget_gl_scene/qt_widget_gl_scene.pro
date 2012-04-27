@@ -12,8 +12,12 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
     demoscene.cpp \
-    camera.cpp
+    camera.cpp \
+    demoview.cpp \
+    demoitem.cpp
 
 HEADERS  += \
     demoscene.h \
-    camera.h
+    camera.h \
+    demoview.h \
+    demoitem.h
