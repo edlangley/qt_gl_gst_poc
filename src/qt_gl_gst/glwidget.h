@@ -14,11 +14,13 @@
 
 #include <iostream>
 
-#include <GL/glut.h>
-#include <glm.h>
+//#include <GL/glut.h>
+//#include <glm.h>
 
 #include "gstthread.h"
 #include "pipeline.h"
+
+#include "model.h"
 
 #define INERTIA_THRESHOLD       1.0f
 #define INERTIA_FACTOR          0.5f
@@ -26,7 +28,8 @@
 #define SCALE_INCREMENT         0.5f
 
 #define DFLT_OBJ_MODEL_FILE_NAME    "models/glm-data/sphere.obj"
-
+#define MODEL_BOUNDARY_SIZE     2.0f
+/*
 typedef enum
 {
     ModelFirst = 0,
@@ -36,11 +39,11 @@ typedef enum
     ModelTorus = 3,
     ModelLast = 3,
 } ModelType;
-
+*/
 typedef enum
 {
-    ModelEffectFirst = 0,
-    ModelEffectNone = 0,
+    ModelEffectFirst = 1,
+//    ModelEffectNone = 0,
     ModelEffectBrick = 1,
     ModelEffectVideo = 2,
     ModelEffectLast = 2,
@@ -69,6 +72,11 @@ typedef struct _VidTextureInfo
 
 } VidTextureInfo;
 
+typedef struct _GLShaderModule
+{
+    const char *sourceFileName;
+    QGLShader::ShaderType type;
+} GLShaderModule;
 
 class GLWidget : public QGLWidget
 {
@@ -107,7 +115,7 @@ private:
     void setVidShaderVars(int vidIx, bool printErrors);
     int loadShaderFile(QString fileName, QString &shaderSource);
     int setupShader(QGLShaderProgram *prog, QString baseFileName, bool vertNeeded, bool fragNeeded);
-    int setupShader(QGLShaderProgram *prog, const char *shaderList[], int listLen);
+    int setupShader(QGLShaderProgram *prog, GLShaderModule shaderList[], int listLen);
     int printOpenGLError(const char *file, int line);
     void nextClearColor(void);
 
@@ -130,6 +138,9 @@ private:
     float fYInertiaOld;
     // Deprecate:
     GLfloat fScale; // replace with changing zPos
+
+    QMatrix4x4 modelViewMatrix;
+    QMatrix4x4 projectionMatrix;
 
     int clearColor;
     bool stackVidQuads;
@@ -155,8 +166,9 @@ private:
     GLuint alphaTexWidth;
     GLuint alphaTexHeight;
 
-    ModelType currentModel;
-    GLMmodel *objModel;
+//    ModelType currentModel;
+//    GLMmodel *objModel;
+    Model *model;
 
 signals:
     void xRotationChanged(int angle);

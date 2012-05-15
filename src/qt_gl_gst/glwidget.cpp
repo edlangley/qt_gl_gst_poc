@@ -27,9 +27,10 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     timer->start(20);
 
     grabKeyboard();
+
     // Need this for glut models:
-    int zero = 0;
-    glutInit(&zero, NULL);
+//    int zero = 0;
+//    glutInit(&zero, NULL);
 
     // Video shader effects vars
     ColourHilightRangeMin = QVector4D(0.0, 0.0, 0.0, 0.0);
@@ -52,8 +53,8 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
                          this->gstThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
     }
 
-    currentModel = ModelFirst;
-    objModel = NULL;
+    //currentModel = ModelFirst;
+    model = NULL;
 }
 
 GLWidget::~GLWidget()
@@ -61,25 +62,37 @@ GLWidget::~GLWidget()
 }
 
 // Arrays containing lists of shaders which can be linked and used together:
-#define NUM_SHADERS_VIDI420NOEFFECT       2
-const char *VidI420NoEffectShaderList[NUM_SHADERS_VIDI420NOEFFECT] =
+#define NUM_SHADERS_BRICKGLES       2
+GLShaderModule BrickGLESShaderList[NUM_SHADERS_BRICKGLES] =
 {
-    "shaders/noeffect.frag",
-    "shaders/yuv2rgb.frag"
+#if 1
+    { "shaders/brick-gles.vert", QGLShader::Vertex },
+    { "shaders/brick-gles.frag", QGLShader::Fragment }
+#else
+    { "shaders/brick.vert", QGLShader::Vertex },
+    { "shaders/brick.frag", QGLShader::Fragment }
+#endif
+};
+
+#define NUM_SHADERS_VIDI420NOEFFECT       2
+GLShaderModule VidI420NoEffectShaderList[NUM_SHADERS_VIDI420NOEFFECT] =
+{
+    { "shaders/noeffect.frag", QGLShader::Fragment },
+    { "shaders/yuv2rgb.frag", QGLShader::Fragment }
 };
 
 #define NUM_SHADERS_VIDI420COLOURHILIGHT       2
-const char *VidI420ColourHilightShaderList[NUM_SHADERS_VIDI420COLOURHILIGHT] =
+GLShaderModule VidI420ColourHilightShaderList[NUM_SHADERS_VIDI420COLOURHILIGHT] =
 {
-    "shaders/colourhilight.frag",
-    "shaders/yuv2rgb.frag"
+    { "shaders/colourhilight.frag", QGLShader::Fragment },
+    { "shaders/yuv2rgb.frag", QGLShader::Fragment }
 };
 
 #define NUM_SHADERS_VIDI420ALPHAMASK       2
-const char *VidI420AlphaMaskShaderList[NUM_SHADERS_VIDI420ALPHAMASK] =
+GLShaderModule VidI420AlphaMaskShaderList[NUM_SHADERS_VIDI420ALPHAMASK] =
 {
-    "shaders/alphamask.frag",
-    "shaders/yuv2rgb.frag"
+    { "shaders/alphamask.frag", QGLShader::Fragment },
+    { "shaders/yuv2rgb.frag", QGLShader::Fragment }
 };
 
 void GLWidget::initializeGL()
@@ -105,7 +118,7 @@ void GLWidget::initializeGL()
     glEnable (GL_BLEND);
     glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-#if 1//0
+#if 0
 // no shader:
 
     /* Lighting Variables */
@@ -137,9 +150,11 @@ void GLWidget::initializeGL()
     static GLfloat lightPosition[4] = { 0.5, 5.0, 7.0, 1.0 };
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
     glEnable(GL_NORMALIZE);
-//#else
+#else
 // shader:
-    setupShader(&brickProg, "shaders/brick", true, true);
+    //setupShader(&brickProg, "shaders/brick", true, true);
+    setupShader(&brickProg, BrickGLESShaderList, NUM_SHADERS_BRICKGLES);
+
     // Set up initial uniform values
     brickProg.setUniformValue("BrickColor", QVector3D(1.0, 0.3, 0.2));
     brickProg.setUniformValue("MortarColor", QVector3D(0.85, 0.86, 0.84));
@@ -147,6 +162,8 @@ void GLWidget::initializeGL()
     brickProg.setUniformValue("BrickPct", QVector3D(0.90, 0.85, 0.90));
     brickProg.setUniformValue("LightPosition", QVector3D(0.0, 0.0, 4.0));
     brickProg.release();
+
+    printOpenGLError(__FILE__, __LINE__);
 
     //setupShader(&I420NoEffect, "yuv2rgb-standalone", false, true);
     setupShader(&I420NoEffect, VidI420NoEffectShaderList, NUM_SHADERS_VIDI420NOEFFECT);
@@ -175,7 +192,7 @@ void GLWidget::initializeGL()
     }
 
 
-
+/*
     objModel = glmReadOBJ(DFLT_OBJ_MODEL_FILE_NAME);
     printOpenGLError(__FILE__, __LINE__);
     if (!objModel)
@@ -190,6 +207,14 @@ void GLWidget::initializeGL()
         glmVertexNormals(objModel, 90.0, GL_TRUE);
         printOpenGLError(__FILE__, __LINE__);
     }
+*/
+    model = new Model();
+    if(model->Load(DFLT_OBJ_MODEL_FILE_NAME) != 0)
+    {
+        qCritical() << "Couldn't load obj model file " << DFLT_OBJ_MODEL_FILE_NAME;
+    }
+    model->SetScale(MODEL_BOUNDARY_SIZE);
+
 }
 
 void GLWidget::paintGL()
@@ -201,25 +226,33 @@ void GLWidget::paintGL()
 
     glLoadIdentity();
     glTranslatef(0.0, 0.0, -5.0);
-
     glRotatef(zRot / 16.0, 0.0, 0.0, 1.0);
     glRotatef(xRot / 16.0, 1.0, 0.0, 0.0);
     glRotatef(yRot / 16.0, 0.0, 1.0, 0.0);
-
     glScalef(fScale, fScale, fScale);
 
+    this->modelViewMatrix = QMatrix4x4();
+    this->modelViewMatrix.translate(0.0, 0.0, -5.0);
+    this->modelViewMatrix.rotate(zRot / 16.0, 0.0, 0.0, 1.0);
+    this->modelViewMatrix.rotate(xRot / 16.0, 1.0, 0.0, 0.0);
+    this->modelViewMatrix.rotate(yRot / 16.0, 0.0, 1.0, 0.0);
+    this->modelViewMatrix.scale(fScale, fScale, fScale);
 
     // Draw an object in the middle
     ModelEffectType enabledModelEffect = currentModelEffect;
+    QGLShaderProgram *currentShader = NULL;
     switch(enabledModelEffect)
     {
+/* Must have a shader if we are doing GL ES 2:
     case ModelEffectNone:
         glmUseOtherTexId(objModel, 0, 0);
         //glUseProgram(0);
         brickProg.release();
         break;
+*/
     case ModelEffectBrick:
         brickProg.bind();
+        currentShader = &brickProg;
         break;
     case ModelEffectVideo:
         glActiveTexture(GL_TEXTURE0_ARB);
@@ -229,22 +262,13 @@ void GLWidget::paintGL()
         this->vidTextures[0].shader->bind();
         setVidShaderVars(0, false);
 
-        glmUseOtherTexId(objModel, 1, this->vidTextures[0].texId);
+        currentShader = this->vidTextures[0].shader;
+
+        //glmUseOtherTexId(objModel, 1, this->vidTextures[0].texId);
         break;
     }
- #if 0
-    if(vidOnObject)
-    {
-        glActiveTexture(GL_TEXTURE0_ARB);
-        glEnable(GL_TEXTURE_RECTANGLE_ARB);
-        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[0].texId);
 
-        this->vidTextures[0].shader->bind();
-        setVidShaderVars(0, false);
-    }
-    else
-        brickProg.bind();
-#endif
+/*
     switch( currentModel )
     {
         case ModelLoadedObj:
@@ -264,11 +288,14 @@ void GLWidget::paintGL()
             glutSolidTeapot(0.6f);
             break;
     }
+*/
+
+    model->Draw((modelViewMatrix*projectionMatrix), currentShader, false);
 
     switch(enabledModelEffect)
     {
-    case ModelEffectNone:
-        break;
+//    case ModelEffectNone:
+//        break;
     case ModelEffectBrick:
         brickProg.release();
         break;
@@ -276,12 +303,7 @@ void GLWidget::paintGL()
         printOpenGLError(__FILE__, __LINE__);
         break;
     }
-#if 0
-    if(vidOnObject)
-        printOpenGLError(__FILE__, __LINE__);
-    else
-        brickProg.release();
-#endif
+
 
     // Draw videos around the object
     for(int vidIx = 0; vidIx < this->vidTextures.size(); vidIx++)
@@ -312,17 +334,26 @@ void GLWidget::paintGL()
             GLfloat height = this->vidTextures[vidIx].height;
 
             glPushMatrix();
+            QMatrix4x4 vidQuadMatrix = this->modelViewMatrix;
+
             if(stackVidQuads)
             {
                 glTranslatef(0.0, 0.0, 2.0);
                 glTranslatef(0.0, 0.0, 0.2*vidIx);
+
+                vidQuadMatrix.translate(0.0, 0.0, 2.0);
+                vidQuadMatrix.translate(0.0, 0.0, 0.2*vidIx);
             }
             else
             {
                 glRotatef((360/this->vidTextures.size())*vidIx, 0.0, 1.0, 0.0);
                 glTranslatef(0.0, 0.0, 2.0);
+
+                vidQuadMatrix.rotate((360/this->vidTextures.size())*vidIx, 0.0, 1.0, 0.0);
+                vidQuadMatrix.translate(0.0, 0.0, 2.0);
             }
 
+            // TODO: replace this with GL ES compliant code:
             glBegin(GL_QUADS);
                 glMultiTexCoord2fARB(GL_TEXTURE0_ARB, width, 0.0f);
                 glMultiTexCoord2fARB(GL_TEXTURE1_ARB, alphaTexWidth, 0.0f);
@@ -337,6 +368,7 @@ void GLWidget::paintGL()
                 glMultiTexCoord2fARB(GL_TEXTURE1_ARB, alphaTexWidth, alphaTexHeight);
                 glVertex2f(-1.3f, -1.0f);
             glEnd();
+
             glPopMatrix();
         }
 
@@ -351,13 +383,17 @@ void GLWidget::resizeGL(int wid, int ht)
     glViewport(0, 0, wid, ht);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-
     //glOrtho(-1.0, 1.0, -1.0, 1.0, -10.0, 10.0);
     glFrustum(-vp, vp, -vp / aspect, vp / aspect, 1.0, 50.0);
 
+    this->projectionMatrix = QMatrix4x4();
+    this->projectionMatrix.frustum(-vp, vp, -vp / aspect, vp / aspect, 1.0, 50.0);
+
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glTranslatef(0.0, 0.0, -5.0);
+//    glTranslatef(0.0, 0.0, -5.0);
+
+    this->modelViewMatrix = QMatrix4x4();
 }
 
 void GLWidget::newFrame(int vidIx)
@@ -612,7 +648,7 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
                           "? - Help\n"
                           "q, <esc> - Quit\n"
                           "b - Toggle among background clear colors\n"
-                          "t - Toggle among models to render\n"
+                          "m - Load a different model to render\n"
                           "s - "
                           "a - "
                           "v - "
@@ -632,12 +668,14 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
         case Qt::Key_B:
             nextClearColor();
             break;
+/*
         case Qt::Key_T:
             if (currentModel >= ModelLast)
                 currentModel = ModelFirst;
             else
                 currentModel = (ModelType) ((int) currentModel + 1);
             break;
+*/
         case Qt::Key_S:
             {
                 int lastVidDrawn = this->vidTextures.size() - 1;
@@ -689,6 +727,7 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
                                                                       "./models/", "Wavefront OBJ (*.obj)");
                 if(objFileName.isNull() == false)
                 {
+/*
                     this->makeCurrent();
 
                     glmDelete(objModel);
@@ -703,6 +742,12 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
                         glmUnitize(objModel);
                         glmVertexNormals(objModel, 90.0, GL_TRUE);
                     }
+*/
+                    if(model->Load(objFileName) != 0)
+                    {
+                        qCritical() << "Couldn't load obj model file " << objFileName;
+                    }
+                    model->SetScale(MODEL_BOUNDARY_SIZE);
                 }
             }
             break;
@@ -946,20 +991,20 @@ int GLWidget::setupShader(QGLShaderProgram *prog, QString baseFileName, bool ver
     return 0;
 }
 
-int GLWidget::setupShader(QGLShaderProgram *prog, const char *shaderList[], int listLen)
+int GLWidget::setupShader(QGLShaderProgram *prog, GLShaderModule shaderList[], int listLen)
 {
     bool ret;
 
     for(int listIx = 0; listIx < listLen; listIx++)
     {
         QString shaderSource;
-        ret = loadShaderFile(shaderList[listIx], shaderSource);
+        ret = loadShaderFile(shaderList[listIx].sourceFileName, shaderSource);
         if(ret != 0)
         {
             return ret;
         }
 
-        ret = prog->addShaderFromSourceCode(QGLShader::Fragment,
+        ret = prog->addShaderFromSourceCode(shaderList[listIx].type,
                                               shaderSource);
         printOpenGLError(__FILE__, __LINE__);
         if(ret == false)

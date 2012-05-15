@@ -16,16 +16,17 @@ DEFINES += UNIX
 SOURCES += main.cpp \
     glwidget.cpp \
     pipeline.cpp \
-    gstthread.cpp
+    gstthread.cpp \
+    model.cpp
 
 HEADERS  += \
     glwidget.h \
     pipeline.h \
     gstthread.h \
-    AsyncQueue.h
+    AsyncQueue.h \
+    model.h
 
-LIBS += -lglut \
-    -lgstreamer-0.10 \
+LIBS += -lgstreamer-0.10 \
     -lgstinterfaces-0.10 \
     -lglib-2.0 \
     -lgmodule-2.0 \
@@ -41,11 +42,6 @@ INCLUDEPATH += /usr/include/gstreamer-0.10 \
     /usr/lib/i386-linux-gnu/glib-2.0/include \
     /usr/include/libxml2
 
-# GLM wavefront obj model loading, with control over texture ID used :
-LIBS += -L. -lglmeml \
-    -lm \
-    -ljpeg \
-    -lpng \
-    -lz
-INCLUDEPATH += .
-
+# Model loading using Assimp:
+LIBS += -L. -lassimp
+INCLUDEPATH += /home/elangley/3d_existing_code/assimp--2.0.863-sdk/include/
