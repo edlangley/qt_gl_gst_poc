@@ -14,9 +14,6 @@
 
 #include <iostream>
 
-//#include <GL/glut.h>
-//#include <glm.h>
-
 #include "gstthread.h"
 #include "pipeline.h"
 
@@ -29,24 +26,13 @@
 
 #define DFLT_OBJ_MODEL_FILE_NAME    "models/glm-data/sphere.obj"
 #define MODEL_BOUNDARY_SIZE     2.0f
-/*
+
 typedef enum
 {
-    ModelFirst = 0,
-    ModelLoadedObj = 0,
-    ModelTeapot = 1,
-    ModelSphere = 2,
-    ModelTorus = 3,
-    ModelLast = 3,
-} ModelType;
-*/
-typedef enum
-{
-    ModelEffectFirst = 1,
-//    ModelEffectNone = 0,
-    ModelEffectBrick = 1,
-    ModelEffectVideo = 2,
-    ModelEffectLast = 2,
+    ModelEffectFirst = 0,
+    ModelEffectBrick = 0,
+    ModelEffectVideo = 1,
+    ModelEffectLast = 1,
 } ModelEffectType;
 
 typedef enum

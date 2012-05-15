@@ -171,7 +171,6 @@ void Model::SetScale(qreal boundarySize)
     longestSide = qMax(scene_max.z - scene_min.z, longestSide);
 
     scaleFactor = boundarySize / (qreal)longestSide;
-    //scaleFactor = 10.0 / (qreal)longestSide;
 }
 
 void Model::Draw(QMatrix4x4 MVPMatrix, QGLShaderProgram *shaderProg, bool useModelTextures)
@@ -262,19 +261,11 @@ void Model::get_bounding_box_for_node (const struct aiNode* nd,
 
                         struct aiVector3D tmp = mesh->mVertices[t];
                         aiTransformVecByMatrix4(&tmp,trafo);
-/*
-                        min->x = aisgl_min(min->x,tmp.x);
-                        min->y = aisgl_min(min->y,tmp.y);
-                        min->z = aisgl_min(min->z,tmp.z);
-*/
+
                         min->x = qMin(min->x,tmp.x);
                         min->y = qMin(min->y,tmp.y);
                         min->z = qMin(min->z,tmp.z);
-/*
-                        max->x = aisgl_max(max->x,tmp.x);
-                        max->y = aisgl_max(max->y,tmp.y);
-                        max->z = aisgl_max(max->z,tmp.z);
-*/
+
                         max->x = qMax(max->x,tmp.x);
                         max->y = qMax(max->y,tmp.y);
                         max->z = qMax(max->z,tmp.z);
