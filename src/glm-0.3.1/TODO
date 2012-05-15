@@ -1,4 +1,0 @@
-TODO:
-
-- allow CR, CRLF, or LF as end-of-line in input obj and mtl
-- use glTexSubImage2D instead of gluScaleImage
