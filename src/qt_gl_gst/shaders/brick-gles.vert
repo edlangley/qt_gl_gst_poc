@@ -27,7 +27,9 @@ varying vec3  MCposition;
 
 void main(void)
 {
-    vec3 ecPosition = vec3 (gl_ModelViewMatrix * vertex);
+//    vec3 ecPosition = vec3 (gl_ModelViewMatrix * vertex);
+    vec3 ecPosition = vec3 (mvp_matrix * vertex);
+
     vec3 tnorm      = normalize(gl_NormalMatrix * normal);
     vec3 lightVec   = normalize(LightPosition - ecPosition);
     vec3 reflectVec = reflect(-lightVec, tnorm);
@@ -45,6 +47,7 @@ void main(void)
                       SpecularContribution * spec;
 
     MCposition      = vertex.xyz;
-    gl_Position     = (gl_ModelViewProjectionMatrix * vertex);
 //    gl_Position     = ftransform();
+//    gl_Position     = (gl_ModelViewProjectionMatrix * vertex);
+    gl_Position     = (mvp_matrix * vertex);
 }

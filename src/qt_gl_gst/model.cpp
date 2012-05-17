@@ -70,7 +70,7 @@ void Model::aiNodesToVertexArrays()
         // process the current node
         ModelNode newModelNode;
         newModelNode.transformMatrix = currentNode->mTransformation;
-        aiTransposeMatrix4(&newModelNode.transformMatrix);
+        //aiTransposeMatrix4(&newModelNode.transformMatrix);
 
         for(unsigned int meshIx = 0; meshIx < currentNode->mNumMeshes; ++meshIx)
         {
@@ -173,7 +173,7 @@ void Model::SetScale(qreal boundarySize)
     scaleFactor = boundarySize / (qreal)longestSide;
 }
 
-void Model::Draw(QMatrix4x4 MVPMatrix, QGLShaderProgram *shaderProg, bool useModelTextures)
+void Model::Draw(QMatrix4x4 modelViewMatrix, QMatrix4x4 projectionMatrix, QGLShaderProgram *shaderProg, bool useModelTextures)
 {
     if (!scene)
     {
@@ -187,23 +187,39 @@ void Model::Draw(QMatrix4x4 MVPMatrix, QGLShaderProgram *shaderProg, bool useMod
     glScaled(scaleFactor, scaleFactor, scaleFactor);
     glTranslatef( -scene_center.x, -scene_center.y, -scene_center.z );
 
+    //modelViewMatrix.scale(scaleFactor, scaleFactor, scaleFactor);
+    modelViewMatrix.scale(scaleFactor);
+    modelViewMatrix.translate(-scene_center.x, -scene_center.y, -scene_center.z);
+
     foreach(ModelNode node, nodes)
     {
         glPushMatrix();
-        glMultMatrixf((float*)&node.transformMatrix);
+        //glMultMatrixf((float*)&node.transformMatrix);
+
+        // TODO: make matrix in node struct a QMatrix4x4
+        //QMatrix4x4 meshTransform = QMatrix4x4(node.transformMatrix);
+        //MVPMatrix *= meshTransform;
 
         // load modelview projection matrix into shader.
 #if 1
+        QMatrix4x4 freshQMatrix = QMatrix4x4();
+        float vp = 0.8f;
+        float aspect = (float) 1440 / (float) 900;
+        //freshQMatrix.frustum(-vp, vp, -vp / aspect, vp / aspect, 1.0, 5000.0);
+        freshQMatrix.perspective(60.0, (1440/900), 1.0, 5000.0);
+        //freshQMatrix.translate(0.0, 0.0, 2.0);
 
-        double currentGLMVPMatrix[16];
-        glGetDoublev(GL_TRANSPOSE_MODELVIEW_MATRIX, (double*)currentGLMVPMatrix);
-        QMatrix4x4 currentQMatrix = QMatrix4x4((qreal*)currentGLMVPMatrix);
-        shaderProg->setUniformValue("mvp_matrix", currentQMatrix);
+        //freshQMatrix.scale(scaleFactor, scaleFactor, scaleFactor);
+        //shaderProg->setUniformValue("mvp_matrix", freshQMatrix);
 
-
+        //modelViewMatrix.translate(0.0, 0.0, -2.0);
+        //shaderProg->setUniformValue("mvp_matrix", (modelViewMatrix*freshQMatrix));
+        //shaderProg->setUniformValue("mvp_matrix", modelViewMatrix*projectionMatrix);
+        shaderProg->setUniformValue("mvp_matrix", modelViewMatrix);
 #else
         QMatrix4x4 currentQMatrix = QMatrix4x4();
-        currentQMatrix.scale(0.5);
+        //currentQMatrix.scale(0.5);
+        currentQMatrix.scale(scaleFactor);
         currentQMatrix.perspective(60.0, (1440/900), 1.0, 50.0);
         currentQMatrix.lookAt(QVector3D(-5, -3, 20),QVector3D(0,0,0),QVector3D(0.0,0.0,1.0));
         shaderProg->setUniformValue("mvp_matrix", currentQMatrix);

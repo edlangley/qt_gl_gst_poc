@@ -187,19 +187,40 @@ void GLWidget::paintGL()
         break;
     case ModelEffectVideo:
         glActiveTexture(GL_TEXTURE0_ARB);
-        //glEnable(GL_TEXTURE_RECTANGLE_ARB);
         glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[0].texId);
 
         this->vidTextures[0].shader->bind();
         setVidShaderVars(0, false);
 
         currentShader = this->vidTextures[0].shader;
-
-        //glmUseOtherTexId(objModel, 1, this->vidTextures[0].texId);
         break;
     }
 
-    model->Draw((modelViewMatrix*projectionMatrix), currentShader, false);
+    // DEBUG:
+    double currentGL_MV_Matrix[16];
+    glGetDoublev(GL_MODELVIEW_MATRIX, (double*)currentGL_MV_Matrix);
+    QMatrix4x4 currentGL_MV_QMatrix = QMatrix4x4((qreal*)currentGL_MV_Matrix);
+
+    double currentGL_MVP_Matrix[16];
+    glGetDoublev(GL_PROJECTION_MATRIX, (double*)currentGL_MVP_Matrix);
+    QMatrix4x4 currentGL_MVP_QMatrix = QMatrix4x4((qreal*)currentGL_MVP_Matrix);
+
+//    model->Draw((modelViewMatrix*projectionMatrix), currentShader, false);
+
+    //QMatrix4x4 scaledMatrix = QMatrix4x4();
+    //scaledMatrix.perspective(60.0, (1440/900), 2.0, 5000.0);
+    QMatrix4x4 scaledMatrix = projectionMatrix;
+    scaledMatrix.lookAt(QVector3D(0.0, 0.0, -5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
+
+    scaledMatrix.scale((qreal)fScale);
+    //scaledMatrix.translate(0.0, 0.0, -5.0);
+    scaledMatrix.rotate(-zRot / 16.0, 0.0, 0.0, 1.0);
+    scaledMatrix.rotate(-xRot / 16.0, 1.0, 0.0, 0.0);
+    scaledMatrix.rotate(yRot / 16.0, 0.0, 1.0, 0.0);
+    model->Draw(scaledMatrix, projectionMatrix, currentShader, false);
+
+
+    //model->Draw(modelViewMatrix, projectionMatrix, currentShader, false);
 
     switch(enabledModelEffect)
     {
@@ -293,6 +314,7 @@ void GLWidget::resizeGL(int wid, int ht)
 
     this->projectionMatrix = QMatrix4x4();
     this->projectionMatrix.frustum(-vp, vp, -vp / aspect, vp / aspect, 1.0, 50.0);
+    //this->projectionMatrix.perspective(60.0, (1440/900), 1.0, 5000.0);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();

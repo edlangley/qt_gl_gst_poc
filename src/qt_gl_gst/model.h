@@ -50,7 +50,7 @@ public:
 
     int Load(QString fileName);
     void SetScale(qreal boundarySize);
-    void Draw(QMatrix4x4 MVPMatrix, QGLShaderProgram *shaderProg, bool useModelTextures);
+    void Draw(QMatrix4x4 modelViewMatrix, QMatrix4x4 projectionMatrix, QGLShaderProgram *shaderProg, bool useModelTextures);
 
 private:
     void aiNodesToVertexArrays();

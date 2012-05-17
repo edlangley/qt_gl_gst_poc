@@ -52,7 +52,6 @@ typedef struct _VidTextureInfo
     int width;
     int height;
     ColFormat colourFormat;
-//    GLuint textureUnit;
     QGLShaderProgram *shader;
     VidShaderEffectType effect;
 
@@ -81,7 +80,6 @@ public:
 protected:
     void initializeGL();
     void paintGL();
-    //void drawSky();
     void resizeGL(int width, int height);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
@@ -130,7 +128,6 @@ private:
 
     int clearColor;
     bool stackVidQuads;
-    //bool vidOnObject;
     ModelEffectType currentModelEffect;
 
     int getCallingGstVecIx(int vidIx);
@@ -144,7 +141,7 @@ private:
     QGLShaderProgram I420ColourHilight;
     QGLShaderProgram I420AlphaMask;
 
-    // video shader effects vars - for simplicitys sake make them general to all vids
+    // Video shader effects vars - for simplicitys sake make them general to all vids
     QVector4D ColourHilightRangeMin;
     QVector4D ColourHilightRangeMax;
     GLuint alphaTextureId;
@@ -152,8 +149,6 @@ private:
     GLuint alphaTexWidth;
     GLuint alphaTexHeight;
 
-//    ModelType currentModel;
-//    GLMmodel *objModel;
     Model *model;
 
 signals:
