@@ -69,8 +69,25 @@ void Model::aiNodesToVertexArrays()
 
         // process the current node
         ModelNode newModelNode;
-        newModelNode.transformMatrix = currentNode->mTransformation;
-        //aiTransposeMatrix4(&newModelNode.transformMatrix);
+
+
+        newModelNode.transformMatrix = QMatrix4x4((qreal)currentNode->mTransformation.a1,
+                                                  (qreal)currentNode->mTransformation.a2,
+                                                  (qreal)currentNode->mTransformation.a3,
+                                                  (qreal)currentNode->mTransformation.a4,
+                                                  (qreal)currentNode->mTransformation.b1,
+                                                  (qreal)currentNode->mTransformation.b2,
+                                                  (qreal)currentNode->mTransformation.b3,
+                                                  (qreal)currentNode->mTransformation.b4,
+                                                  (qreal)currentNode->mTransformation.c1,
+                                                  (qreal)currentNode->mTransformation.c2,
+                                                  (qreal)currentNode->mTransformation.c3,
+                                                  (qreal)currentNode->mTransformation.c4,
+                                                  (qreal)currentNode->mTransformation.d1,
+                                                  (qreal)currentNode->mTransformation.d2,
+                                                  (qreal)currentNode->mTransformation.d3,
+                                                  (qreal)currentNode->mTransformation.d4);
+
 
         for(unsigned int meshIx = 0; meshIx < currentNode->mNumMeshes; ++meshIx)
         {
@@ -187,43 +204,23 @@ void Model::Draw(QMatrix4x4 modelViewMatrix, QMatrix4x4 projectionMatrix, QGLSha
     glScaled(scaleFactor, scaleFactor, scaleFactor);
     glTranslatef( -scene_center.x, -scene_center.y, -scene_center.z );
 
-    //modelViewMatrix.scale(scaleFactor, scaleFactor, scaleFactor);
     modelViewMatrix.scale(scaleFactor);
     modelViewMatrix.translate(-scene_center.x, -scene_center.y, -scene_center.z);
 
     foreach(ModelNode node, nodes)
     {
         glPushMatrix();
-        //glMultMatrixf((float*)&node.transformMatrix);
+        glMultMatrixf((float*)&node.transformMatrix);
 
         // TODO: make matrix in node struct a QMatrix4x4
         //QMatrix4x4 meshTransform = QMatrix4x4(node.transformMatrix);
-        //MVPMatrix *= meshTransform;
+        modelViewMatrix *= node.transformMatrix;
 
-        // load modelview projection matrix into shader.
-#if 1
-        QMatrix4x4 freshQMatrix = QMatrix4x4();
-        float vp = 0.8f;
-        float aspect = (float) 1440 / (float) 900;
-        //freshQMatrix.frustum(-vp, vp, -vp / aspect, vp / aspect, 1.0, 5000.0);
-        freshQMatrix.perspective(60.0, (1440/900), 1.0, 5000.0);
-        //freshQMatrix.translate(0.0, 0.0, 2.0);
+        // Load modelview projection matrix into shader. The projection matrix must
+        // be multiplied by the modelview, not the other way round!
+        shaderProg->setUniformValue("mvp_matrix", projectionMatrix * modelViewMatrix);
+        shaderProg->setUniformValue("mv_matrix", modelViewMatrix);
 
-        //freshQMatrix.scale(scaleFactor, scaleFactor, scaleFactor);
-        //shaderProg->setUniformValue("mvp_matrix", freshQMatrix);
-
-        //modelViewMatrix.translate(0.0, 0.0, -2.0);
-        //shaderProg->setUniformValue("mvp_matrix", (modelViewMatrix*freshQMatrix));
-        //shaderProg->setUniformValue("mvp_matrix", modelViewMatrix*projectionMatrix);
-        shaderProg->setUniformValue("mvp_matrix", modelViewMatrix);
-#else
-        QMatrix4x4 currentQMatrix = QMatrix4x4();
-        //currentQMatrix.scale(0.5);
-        currentQMatrix.scale(scaleFactor);
-        currentQMatrix.perspective(60.0, (1440/900), 1.0, 50.0);
-        currentQMatrix.lookAt(QVector3D(-5, -3, 20),QVector3D(0,0,0),QVector3D(0.0,0.0,1.0));
-        shaderProg->setUniformValue("mvp_matrix", currentQMatrix);
-#endif
         foreach(ModelMesh mesh, node.meshes)
         {
             if(useModelTextures)

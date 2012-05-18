@@ -170,11 +170,11 @@ void GLWidget::paintGL()
     glScalef(fScale, fScale, fScale);
 
     this->modelViewMatrix = QMatrix4x4();
-    this->modelViewMatrix.translate(0.0, 0.0, -5.0);
-    this->modelViewMatrix.rotate(zRot / 16.0, 0.0, 0.0, 1.0);
-    this->modelViewMatrix.rotate(xRot / 16.0, 1.0, 0.0, 0.0);
+    this->modelViewMatrix.lookAt(QVector3D(0.0, 0.0, -5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
+    this->modelViewMatrix.rotate(-zRot / 16.0, 0.0, 0.0, 1.0);
+    this->modelViewMatrix.rotate(-xRot / 16.0, 1.0, 0.0, 0.0);
     this->modelViewMatrix.rotate(yRot / 16.0, 0.0, 1.0, 0.0);
-    this->modelViewMatrix.scale(fScale, fScale, fScale);
+    this->modelViewMatrix.scale(fScale);
 
     // Draw an object in the middle
     ModelEffectType enabledModelEffect = currentModelEffect;
@@ -196,31 +196,26 @@ void GLWidget::paintGL()
         break;
     }
 
-    // DEBUG:
-    double currentGL_MV_Matrix[16];
-    glGetDoublev(GL_MODELVIEW_MATRIX, (double*)currentGL_MV_Matrix);
-    QMatrix4x4 currentGL_MV_QMatrix = QMatrix4x4((qreal*)currentGL_MV_Matrix);
+#if 0
+    QMatrix4x4 testMatrix = QMatrix4x4();
+    QMatrix4x4 testMatrixP = projectionMatrix;
+    testMatrix.lookAt(QVector3D(0.0, 0.0, -5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
+    testMatrixP.lookAt(QVector3D(0.0, 0.0, -5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
+    testMatrix.scale((qreal)fScale);
+    testMatrixP.scale((qreal)fScale);
+    testMatrix.rotate(-zRot / 16.0, 0.0, 0.0, 1.0);
+    testMatrixP.rotate(-zRot / 16.0, 0.0, 0.0, 1.0);
+    testMatrix.rotate(-xRot / 16.0, 1.0, 0.0, 0.0);
+    testMatrixP.rotate(-xRot / 16.0, 1.0, 0.0, 0.0);
+    testMatrix.rotate(yRot / 16.0, 0.0, 1.0, 0.0);
+    testMatrixP.rotate(yRot / 16.0, 0.0, 1.0, 0.0);
 
-    double currentGL_MVP_Matrix[16];
-    glGetDoublev(GL_PROJECTION_MATRIX, (double*)currentGL_MVP_Matrix);
-    QMatrix4x4 currentGL_MVP_QMatrix = QMatrix4x4((qreal*)currentGL_MVP_Matrix);
+    testMatrix = projectionMatrix * testMatrix;
 
-//    model->Draw((modelViewMatrix*projectionMatrix), currentShader, false);
+    model->Draw(testMatrixP, projectionMatrix, currentShader, false);
+#endif
 
-    //QMatrix4x4 scaledMatrix = QMatrix4x4();
-    //scaledMatrix.perspective(60.0, (1440/900), 2.0, 5000.0);
-    QMatrix4x4 scaledMatrix = projectionMatrix;
-    scaledMatrix.lookAt(QVector3D(0.0, 0.0, -5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
-
-    scaledMatrix.scale((qreal)fScale);
-    //scaledMatrix.translate(0.0, 0.0, -5.0);
-    scaledMatrix.rotate(-zRot / 16.0, 0.0, 0.0, 1.0);
-    scaledMatrix.rotate(-xRot / 16.0, 1.0, 0.0, 0.0);
-    scaledMatrix.rotate(yRot / 16.0, 0.0, 1.0, 0.0);
-    model->Draw(scaledMatrix, projectionMatrix, currentShader, false);
-
-
-    //model->Draw(modelViewMatrix, projectionMatrix, currentShader, false);
+    model->Draw(modelViewMatrix, projectionMatrix, currentShader, false);
 
     switch(enabledModelEffect)
     {
@@ -318,8 +313,6 @@ void GLWidget::resizeGL(int wid, int ht)
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-
-    this->modelViewMatrix = QMatrix4x4();
 }
 
 void GLWidget::newFrame(int vidIx)

@@ -35,7 +35,8 @@ class ModelNode
 {
 public:
     QVector<ModelMesh> meshes;
-    struct aiMatrix4x4 transformMatrix;
+    QMatrix4x4 transformMatrix;
+    //struct aiMatrix4x4 aitransformMatrix;
 signals:
 
 public slots:
