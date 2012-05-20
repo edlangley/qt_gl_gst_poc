@@ -218,8 +218,8 @@ void Model::Draw(QMatrix4x4 modelViewMatrix, QMatrix4x4 projectionMatrix, QGLSha
 
         // Load modelview projection matrix into shader. The projection matrix must
         // be multiplied by the modelview, not the other way round!
-        shaderProg->setUniformValue("mvp_matrix", projectionMatrix * modelViewMatrix);
-        shaderProg->setUniformValue("mv_matrix", modelViewMatrix);
+        shaderProg->setUniformValue("u_mvp_matrix", projectionMatrix * modelViewMatrix);
+        shaderProg->setUniformValue("u_mv_matrix", modelViewMatrix);
 
         foreach(ModelMesh mesh, node.meshes)
         {
@@ -230,23 +230,23 @@ void Model::Draw(QMatrix4x4 modelViewMatrix, QMatrix4x4 projectionMatrix, QGLSha
 
             if(mesh.hasNormals)
             {
-                shaderProg->enableAttributeArray("normal");
-                shaderProg->setAttributeArray("normal", mesh.triangleNormals.constData());
+                shaderProg->enableAttributeArray("a_normal");
+                shaderProg->setAttributeArray("a_normal", mesh.triangleNormals.constData());
             }
 
             if(mesh.hasTexcoords)
             {
-                shaderProg->enableAttributeArray("texCoord");
-                shaderProg->setAttributeArray("texCoord", mesh.triangleTexcoords.constData());
+                shaderProg->enableAttributeArray("a_texCoord");
+                shaderProg->setAttributeArray("a_texCoord", mesh.triangleTexcoords.constData());
             }
 
-            shaderProg->enableAttributeArray("vertex");
-            shaderProg->setAttributeArray("vertex", mesh.triangleVertices.constData());
+            shaderProg->enableAttributeArray("a_vertex");
+            shaderProg->setAttributeArray("a_vertex", mesh.triangleVertices.constData());
 
             glDrawArrays(GL_TRIANGLES, 0, mesh.triangleVertices.size());
-            shaderProg->disableAttributeArray("vertex");
-            shaderProg->disableAttributeArray("normal");
-            shaderProg->disableAttributeArray("texCoord");
+            shaderProg->disableAttributeArray("a_vertex");
+            shaderProg->disableAttributeArray("a_normal");
+            shaderProg->disableAttributeArray("a_texCoord");
         }
 
 

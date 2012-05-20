@@ -16,23 +16,23 @@ uniform vec3 LightPosition;
 const float mediump SpecularContribution = 0.3;
 const float mediump DiffuseContribution  = 1.0 - SpecularContribution;
 
-uniform mediump mat4 mvp_matrix;
-uniform mediump mat4 mv_matrix;
+uniform highp mat4 u_mvp_matrix;
+uniform highp mat4 u_mv_matrix;
 
-attribute highp vec4 vertex;
-attribute mediump vec3 normal;
-attribute highp vec4 texCoord; // unused right now
+attribute highp vec4 a_vertex;
+attribute highp vec3 a_normal;
+attribute highp vec4 a_texCoord; // unused right now
 
-varying float mediump LightIntensity;
-varying vec3  mediump MCposition;
+varying mediump float v_LightIntensity;
+varying mediump vec3  v_MCposition;
 
 void main(void)
 {
 //    vec3 ecPosition = vec3 (gl_ModelViewMatrix * vertex);
-    vec3 ecPosition = vec3 (mv_matrix * vertex);
+    vec3 ecPosition = vec3 (u_mv_matrix * a_vertex);
 
 //    vec3 tnorm      = normalize(gl_NormalMatrix * normal);
-    vec3 tnorm      = normalize(mv_matrix * vec4(normal, 0.0));
+    vec3 tnorm      = normalize(u_mv_matrix * vec4(a_normal, 0.0));
 
     vec3 lightVec   = normalize(LightPosition - ecPosition);
     // Using the reflection vector:
@@ -54,11 +54,11 @@ void main(void)
         spec = pow(spec, 46.0);
     }
 
-    LightIntensity  = DiffuseContribution * diffuse +
+    v_LightIntensity  = DiffuseContribution * diffuse +
                       SpecularContribution * spec;
 
-    MCposition      = vertex.xyz;
+    v_MCposition      = a_vertex.xyz;
 //    gl_Position     = ftransform();
 //    gl_Position     = (gl_ModelViewProjectionMatrix * vertex);
-    gl_Position     = (mvp_matrix * vertex);
+    gl_Position     = (u_mvp_matrix * a_vertex);
 }
