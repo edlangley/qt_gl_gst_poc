@@ -38,10 +38,11 @@ typedef enum
 typedef enum
 {
     VidShaderFirst = 0,
-    VidShaderNormal = 0,
+    VidShaderNoEffect = 0,
     VidShaderColourHilight = 1,
     VidShaderAlphaMask = 2,
-    VidShaderLast = 2,
+    VidShaderNoEffectNormalisedTexCoords = 3,
+    VidShaderLast = 3,
 } VidShaderEffectType;
 
 typedef struct _VidTextureInfo
@@ -137,6 +138,7 @@ private:
     QVector<VidTextureInfo> vidTextures;
 
     QGLShaderProgram brickProg;
+    QGLShaderProgram I420NoEffectNormalised;
     QGLShaderProgram I420NoEffect;
     QGLShaderProgram I420ColourHilight;
     QGLShaderProgram I420AlphaMask;

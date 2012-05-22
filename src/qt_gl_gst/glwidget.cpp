@@ -75,6 +75,19 @@ GLShaderModule BrickGLESShaderList[NUM_SHADERS_BRICKGLES] =
 #endif
 };
 
+#define NUM_SHADERS_VIDI420NOEFFECT_NORMALISED       3
+GLShaderModule VidI420NoEffectNormalisedShaderList[NUM_SHADERS_VIDI420NOEFFECT_NORMALISED] =
+{
+#if 1
+    { "shaders/noeffect-gles.vert", QGLShader::Vertex },
+    { "shaders/noeffect-gles.frag", QGLShader::Fragment },
+    { "shaders/yuv2rgb-normalisedtexcoords-gles.frag", QGLShader::Fragment }
+#else
+    { "shaders/noeffect.frag", QGLShader::Fragment },
+    { "shaders/yuv2rgb.frag", QGLShader::Fragment }
+#endif
+};
+
 #define NUM_SHADERS_VIDI420NOEFFECT       3
 GLShaderModule VidI420NoEffectShaderList[NUM_SHADERS_VIDI420NOEFFECT] =
 {
@@ -145,6 +158,7 @@ void GLWidget::initializeGL()
     brickProg.release();
     printOpenGLError(__FILE__, __LINE__);
 
+    setupShader(&I420NoEffectNormalised, VidI420NoEffectNormalisedShaderList, NUM_SHADERS_VIDI420NOEFFECT_NORMALISED);
     setupShader(&I420NoEffect, VidI420NoEffectShaderList, NUM_SHADERS_VIDI420NOEFFECT);
     setupShader(&I420ColourHilight, VidI420ColourHilightShaderList, NUM_SHADERS_VIDI420COLOURHILIGHT);
     setupShader(&I420AlphaMask, VidI420AlphaMaskShaderList, NUM_SHADERS_VIDI420ALPHAMASK);
@@ -160,7 +174,7 @@ void GLWidget::initializeGL()
         glGenTextures(1, &newInfo.texId);
         newInfo.texInfoValid = false;
         newInfo.buffer = NULL;
-        newInfo.effect = VidShaderNormal;
+        newInfo.effect = VidShaderNoEffect;
 
         this->vidTextures.push_back(newInfo);
     }
@@ -205,13 +219,14 @@ void GLWidget::paintGL()
         currentShader = &brickProg;
         break;
     case ModelEffectVideo:
-/*
         glActiveTexture(GL_TEXTURE0_ARB);
         glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[0].texId);
-*/
+
         // TODO: load texture uniform into shader
         // ....
 
+        this->vidTextures[0].effect = VidShaderNoEffectNormalisedTexCoords;
+        setAppropriateVidShader(0);
         this->vidTextures[0].shader->bind();
         setVidShaderVars(0, false);
 
@@ -224,9 +239,14 @@ void GLWidget::paintGL()
     switch(enabledModelEffect)
     {
     case ModelEffectBrick:
-        brickProg.release();
+        currentShader->release();
         break;
     case ModelEffectVideo:
+        this->vidTextures[0].effect = VidShaderNoEffect;
+        setAppropriateVidShader(0);
+        this->vidTextures[0].shader->bind();
+        setVidShaderVars(0, false);
+
         printOpenGLError(__FILE__, __LINE__);
         break;
     }
@@ -271,6 +291,8 @@ void GLWidget::paintGL()
                 vidQuadMatrix.translate(0.0, 0.0, 2.0);
             }
 
+            //model->Draw(vidQuadMatrix, projectionMatrix, vidShader, false);
+//#if 1
             // Move these arrays into VidTextureInfo structure and populate
             // in setVidShaderVars():
             vidTriStripTexCoords[0]      = QVector2D(vidWidth, 0.0f);
@@ -315,6 +337,7 @@ void GLWidget::paintGL()
                 vidShader->disableAttributeArray("a_alphaTexCoord");
             }
             vidShader->disableAttributeArray("a_texCoord");
+//#endif
         }
     }
 }
@@ -762,10 +785,12 @@ void GLWidget::setAppropriateVidShader(int vidIx)
     case ColFmt_I420:
         switch(this->vidTextures[vidIx].effect)
         {
-        case VidShaderNormal:
+        case VidShaderNoEffect:
             this->vidTextures[vidIx].shader = &I420NoEffect;
             break;
-
+        case VidShaderNoEffectNormalisedTexCoords:
+            this->vidTextures[vidIx].shader = &I420NoEffectNormalised;
+            break;
         case VidShaderColourHilight:
             this->vidTextures[vidIx].shader = &I420ColourHilight;
             break;
@@ -788,7 +813,8 @@ void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
 
     switch(this->vidTextures[vidIx].effect)
     {
-    case VidShaderNormal:
+    case VidShaderNoEffect:
+    case VidShaderNoEffectNormalisedTexCoords:
         /*
         this->vidTextures[vidIx].shader->setUniformValue("vidTexture", 0); // texture unit index
         this->vidTextures[vidIx].shader->setUniformValue("yHeight", (GLfloat)this->vidTextures[vidIx].height);
