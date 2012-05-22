@@ -59,7 +59,7 @@ void Model::aiNodesToVertexArrays()
 
     while(flatNodePtrList.size())
     {
-        // store children nodes to process next, removing the
+        // Store children nodes to process next, removing the
         // current (parent) node from the front of the list:
         currentNode = flatNodePtrList.takeFirst();
         for(int childNodeIx = currentNode->mNumChildren-1; childNodeIx >= 0; --childNodeIx)
@@ -67,9 +67,8 @@ void Model::aiNodesToVertexArrays()
             flatNodePtrList.prepend(currentNode->mChildren[childNodeIx]);
         }
 
-        // process the current node
+        // Process the current node:
         ModelNode newModelNode;
-
 
         newModelNode.transformMatrix = QMatrix4x4((qreal)currentNode->mTransformation.a1,
                                                   (qreal)currentNode->mTransformation.a2,
@@ -95,7 +94,7 @@ void Model::aiNodesToVertexArrays()
 
             ModelMesh newModelMesh;
 
-            // grab texture info/load image file here....
+            // TODO: Grab texture info/load image file here....
 
             newModelMesh.hasNormals = currentMesh->HasNormals();
             newModelMesh.hasTexcoords = currentMesh->HasTextureCoords(0);
@@ -144,14 +143,14 @@ int Model::Load(QString fileName)
 {
     if(scene)
     {
-        // clear extracted node data
+        // Clear extracted node data
         nodes.resize(0);
 
         aiReleaseImport(scene);
         scene = NULL;
     }
 
-    // load model
+    // Load model
     scene = aiImportFile(fileName.toAscii().constData(), aiProcessPreset_TargetRealtime_Quality);
 
     if (!scene)
@@ -160,16 +159,16 @@ int Model::Load(QString fileName)
         return -1;
     }
 
-    // extract from ai mesh/faces into arrays
+    // Extract from ai mesh/faces into arrays
     aiNodesToVertexArrays();
 
-    // get the offset to center the model about the origin when drawing later
+    // Get the offset to center the model about the origin when drawing later
     get_bounding_box(&scene_min,&scene_max);
     scene_center.x = (scene_min.x + scene_max.x) / 2.0f;
     scene_center.y = (scene_min.y + scene_max.y) / 2.0f;
     scene_center.z = (scene_min.z + scene_max.z) / 2.0f;
 
-    // sensible default
+    // Sensible default
     scaleFactor = 1.0;
 
     return 0;
@@ -198,34 +197,24 @@ void Model::Draw(QMatrix4x4 modelViewMatrix, QMatrix4x4 projectionMatrix, QGLSha
         return;
     }
 
-    glPushMatrix();
-
-    // center and scale the model
-    glScaled(scaleFactor, scaleFactor, scaleFactor);
-    glTranslatef( -scene_center.x, -scene_center.y, -scene_center.z );
-
+    // Center and scale the model
     modelViewMatrix.scale(scaleFactor);
     modelViewMatrix.translate(-scene_center.x, -scene_center.y, -scene_center.z);
 
     foreach(ModelNode node, nodes)
     {
-        glPushMatrix();
-        glMultMatrixf((float*)&node.transformMatrix);
-
-        // TODO: make matrix in node struct a QMatrix4x4
-        //QMatrix4x4 meshTransform = QMatrix4x4(node.transformMatrix);
-        modelViewMatrix *= node.transformMatrix;
+        QMatrix4x4 nodeModelViewMatrix = modelViewMatrix * node.transformMatrix;
 
         // Load modelview projection matrix into shader. The projection matrix must
         // be multiplied by the modelview, not the other way round!
-        shaderProg->setUniformValue("u_mvp_matrix", projectionMatrix * modelViewMatrix);
-        shaderProg->setUniformValue("u_mv_matrix", modelViewMatrix);
+        shaderProg->setUniformValue("u_mvp_matrix", projectionMatrix * nodeModelViewMatrix);
+        shaderProg->setUniformValue("u_mv_matrix", nodeModelViewMatrix);
 
         foreach(ModelMesh mesh, node.meshes)
         {
             if(useModelTextures)
             {
-                // set/enable texture id if desired ....
+                // Set/enable texture id if desired ....
             }
 
             if(mesh.hasNormals)
@@ -248,12 +237,7 @@ void Model::Draw(QMatrix4x4 modelViewMatrix, QMatrix4x4 projectionMatrix, QGLSha
             shaderProg->disableAttributeArray("a_normal");
             shaderProg->disableAttributeArray("a_texCoord");
         }
-
-
-        glPopMatrix();
     }
-
-    glPopMatrix();
 }
 
 

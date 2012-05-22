@@ -1,5 +1,12 @@
 #include "glwidget.h"
 
+#ifdef GLES2
+ #define GL_TEXTURE_RECTANGLE_ARB            GL_TEXTURE_2D
+ #define GL_TEXTURE0_ARB                     GL_TEXTURE0
+ #define GL_TEXTURE1_ARB                     GL_TEXTURE1
+#endif
+
+
 GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     QGLWidget(QGLFormat(QGL::DoubleBuffer | QGL::DepthBuffer | QGL::Rgba), parent),
     closing(false),
@@ -97,8 +104,8 @@ GLShaderModule VidI420ColourHilightShaderList[NUM_SHADERS_VIDI420COLOURHILIGHT] 
 GLShaderModule VidI420AlphaMaskShaderList[NUM_SHADERS_VIDI420ALPHAMASK] =
 {
 #if 0
- { "shaders/noeffect-gles.frag", QGLShader::Fragment },
- { "shaders/yuv2rgb-gles.frag", QGLShader::Fragment }
+    { "shaders/noeffect-gles.frag", QGLShader::Fragment },
+    { "shaders/yuv2rgb-gles.frag", QGLShader::Fragment }
 #else
     { "shaders/alphamask.frag", QGLShader::Fragment },
     { "shaders/yuv2rgb.frag", QGLShader::Fragment }
@@ -124,7 +131,6 @@ void GLWidget::initializeGL()
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_RECTANGLE_ARB);
-
     glEnable (GL_BLEND);
     glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -143,7 +149,7 @@ void GLWidget::initializeGL()
     setupShader(&I420ColourHilight, VidI420ColourHilightShaderList, NUM_SHADERS_VIDI420COLOURHILIGHT);
     setupShader(&I420AlphaMask, VidI420AlphaMaskShaderList, NUM_SHADERS_VIDI420ALPHAMASK);
 
-    // set uniforms for vid shaders along with other stream details when first
+    // Set uniforms for vid shaders along with other stream details when first
     // frame comes through
 
 
@@ -182,13 +188,6 @@ void GLWidget::paintGL()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glLoadIdentity();
-    glTranslatef(0.0, 0.0, -5.0);
-    glRotatef(zRot / 16.0, 0.0, 0.0, 1.0);
-    glRotatef(xRot / 16.0, 1.0, 0.0, 0.0);
-    glRotatef(yRot / 16.0, 0.0, 1.0, 0.0);
-    glScalef(fScale, fScale, fScale);
-
     this->modelViewMatrix = QMatrix4x4();
     this->modelViewMatrix.lookAt(QVector3D(0.0, 0.0, -5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
     this->modelViewMatrix.rotate(-zRot / 16.0, 0.0, 0.0, 1.0);
@@ -206,8 +205,12 @@ void GLWidget::paintGL()
         currentShader = &brickProg;
         break;
     case ModelEffectVideo:
+/*
         glActiveTexture(GL_TEXTURE0_ARB);
         glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[0].texId);
+*/
+        // TODO: load texture uniform into shader
+        // ....
 
         this->vidTextures[0].shader->bind();
         setVidShaderVars(0, false);
@@ -215,25 +218,6 @@ void GLWidget::paintGL()
         currentShader = this->vidTextures[0].shader;
         break;
     }
-
-#if 0
-    QMatrix4x4 testMatrix = QMatrix4x4();
-    QMatrix4x4 testMatrixP = projectionMatrix;
-    testMatrix.lookAt(QVector3D(0.0, 0.0, -5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
-    testMatrixP.lookAt(QVector3D(0.0, 0.0, -5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
-    testMatrix.scale((qreal)fScale);
-    testMatrixP.scale((qreal)fScale);
-    testMatrix.rotate(-zRot / 16.0, 0.0, 0.0, 1.0);
-    testMatrixP.rotate(-zRot / 16.0, 0.0, 0.0, 1.0);
-    testMatrix.rotate(-xRot / 16.0, 1.0, 0.0, 0.0);
-    testMatrixP.rotate(-xRot / 16.0, 1.0, 0.0, 0.0);
-    testMatrix.rotate(yRot / 16.0, 0.0, 1.0, 0.0);
-    testMatrixP.rotate(yRot / 16.0, 0.0, 1.0, 0.0);
-
-    testMatrix = projectionMatrix * testMatrix;
-
-    model->Draw(testMatrixP, projectionMatrix, currentShader, false);
-#endif
 
     model->Draw(modelViewMatrix, projectionMatrix, currentShader, false);
 
@@ -253,8 +237,7 @@ void GLWidget::paintGL()
     {
         if(this->vidTextures[vidIx].texInfoValid)
         {
-            // render a quad with the video on it:
-
+            // Render a quad with the video on it:
             glActiveTexture(GL_TEXTURE0_ARB);
             glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[vidIx].texId);
             printOpenGLError(__FILE__, __LINE__);
@@ -275,43 +258,18 @@ void GLWidget::paintGL()
             GLfloat vidHeight = this->vidTextures[vidIx].height;
             QGLShaderProgram *vidShader = this->vidTextures[vidIx].shader;
 
-            glPushMatrix();
             QMatrix4x4 vidQuadMatrix = this->modelViewMatrix;
 
             if(stackVidQuads)
             {
-                glTranslatef(0.0, 0.0, 2.0);
-                glTranslatef(0.0, 0.0, 0.2*vidIx);
-
                 vidQuadMatrix.translate(0.0, 0.0, 2.0);
                 vidQuadMatrix.translate(0.0, 0.0, 0.2*vidIx);
             }
             else
             {
-                glRotatef((360/this->vidTextures.size())*vidIx, 0.0, 1.0, 0.0);
-                glTranslatef(0.0, 0.0, 2.0);
-
                 vidQuadMatrix.rotate((360/this->vidTextures.size())*vidIx, 0.0, 1.0, 0.0);
                 vidQuadMatrix.translate(0.0, 0.0, 2.0);
             }
-
-            // TODO: replace this with GL ES compliant code:
-            /*
-            glBegin(GL_QUADS);
-                glMultiTexCoord2fARB(GL_TEXTURE0_ARB, vidWidth, 0.0f);
-                glMultiTexCoord2fARB(GL_TEXTURE1_ARB, alphaTexWidth, 0.0f);
-                glVertex2f(-1.3f, 1.0f);
-                glMultiTexCoord2fARB(GL_TEXTURE0_ARB, 0.0f, 0.0f);
-                glMultiTexCoord2fARB(GL_TEXTURE1_ARB, 0.0f, 0.0f);
-                glVertex2f( 1.3f, 1.0f);
-                glMultiTexCoord2fARB(GL_TEXTURE0_ARB, 0.0f, vidHeight);
-                glMultiTexCoord2fARB(GL_TEXTURE1_ARB, 0.0f, alphaTexHeight);
-                glVertex2f( 1.3f, -1.0f);
-                glMultiTexCoord2fARB(GL_TEXTURE0_ARB, vidWidth, vidHeight);
-                glMultiTexCoord2fARB(GL_TEXTURE1_ARB, alphaTexWidth, alphaTexHeight);
-                glVertex2f(-1.3f, -1.0f);
-            glEnd();
-            */
 
             // Move these arrays into VidTextureInfo structure and populate
             // in setVidShaderVars():
@@ -350,7 +308,6 @@ void GLWidget::paintGL()
             vidShader->setAttributeArray("a_vertex", vidTriStripVertices);
 
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            //glDrawArrays(GL_TRIANGLES, 0, 3);
 
             vidShader->disableAttributeArray("a_vertex");
             if(this->vidTextures[vidIx].effect == VidShaderAlphaMask)
@@ -358,11 +315,7 @@ void GLWidget::paintGL()
                 vidShader->disableAttributeArray("a_alphaTexCoord");
             }
             vidShader->disableAttributeArray("a_texCoord");
-
-
-            glPopMatrix();
         }
-
     }
 }
 
@@ -372,17 +325,9 @@ void GLWidget::resizeGL(int wid, int ht)
     float aspect = (float) wid / (float) ht;
 
     glViewport(0, 0, wid, ht);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    //glOrtho(-1.0, 1.0, -1.0, 1.0, -10.0, 10.0);
-    glFrustum(-vp, vp, -vp / aspect, vp / aspect, 1.0, 50.0);
 
     this->projectionMatrix = QMatrix4x4();
     this->projectionMatrix.frustum(-vp, vp, -vp / aspect, vp / aspect, 1.0, 50.0);
-    //this->projectionMatrix.perspective(60.0, (1440/900), 1.0, 5000.0);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
 }
 
 void GLWidget::newFrame(int vidIx)
@@ -394,7 +339,7 @@ void GLWidget::newFrame(int vidIx)
         if(!pipeline)
           return;
 
-        /* vid frame pointer is initialized as null */
+        /* Vid frame pointer is initialized as null */
         if (this->vidTextures[vidIx].buffer)
             pipeline->queue_output_buf.put(this->vidTextures[vidIx].buffer);
 
@@ -402,10 +347,10 @@ void GLWidget::newFrame(int vidIx)
 
         this->makeCurrent();
 
-        // load the gst buf into a texture
+        // Load the gst buf into a texture
         if(this->vidTextures[vidIx].texInfoValid == false)
         {
-            // try and keep this fairly portable to other media frameworks by
+            // Try and keep this fairly portable to other media frameworks by
             // leaving info extraction within pipeline class
             this->vidTextures[vidIx].width = pipeline->getWidth();
             this->vidTextures[vidIx].height = pipeline->getHeight();
@@ -429,7 +374,6 @@ void GLWidget::newFrame(int vidIx)
         glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
         // TODO: move gst macro into pipeline class, have queue contain just pointer
         // to actual frame data
@@ -792,7 +736,7 @@ void GLWidget::closeEvent(QCloseEvent* event)
         this->closing = true;
         emit closeRequested();
 
-        // just in case, check now if any gst threads still exist, if not, close application now
+        // Just in case, check now if any gst threads still exist, if not, close application now
         bool allFinished = true;
         for(int i = 0; i < this->gstThreads.size(); i++)
         {
@@ -1015,7 +959,11 @@ int GLWidget::printOpenGLError(const char *file, int line)
     glErr = glGetError();
     while (glErr != GL_NO_ERROR)
     {
+#ifdef GLES2
+        qCritical() << "glError in file " << file << " @ line " << line << ": " << glErr;
+#else
         qCritical() << "glError in file " << file << " @ line " << line << ": " << (const char *)gluErrorString(glErr);
+#endif
         retCode = 1;
         glErr = glGetError();
     }
