@@ -323,24 +323,6 @@ void GLWidget::paintGL()
                 vidQuadMatrix.translate(0.0, 0.0, 2.0);
             }
 
-            // Move these arrays into VidTextureInfo structure and populate
-            // in setVidShaderVars():
-            vidTriStripTexCoords[0]      = QVector2D(vidWidth, 0.0f);
-            vidTriStripAlphaTexCoords[0] = QVector2D(alphaTexWidth, 0.0f);
-            vidTriStripVertices[0]       = QVector2D(-1.3f, 1.0f);
-
-            vidTriStripTexCoords[1]      = QVector2D(0.0f, 0.0f);
-            vidTriStripAlphaTexCoords[1] = QVector2D(0.0f, 0.0f);
-            vidTriStripVertices[1]       = QVector2D(1.3f, 1.0f);
-
-            vidTriStripTexCoords[2]      = QVector2D(vidWidth, vidHeight);
-            vidTriStripAlphaTexCoords[2] = QVector2D(alphaTexWidth, alphaTexHeight);
-            vidTriStripVertices[2]       = QVector2D(-1.3f, -1.0f);
-
-            vidTriStripTexCoords[3]      = QVector2D(0.0f, vidHeight);
-            vidTriStripAlphaTexCoords[3] = QVector2D(0.0f, alphaTexHeight);
-            vidTriStripVertices[3]       = QVector2D(1.3f, -1.0f);
-
 
             vidShader->setUniformValue("u_mvp_matrix", projectionMatrix * vidQuadMatrix);
             vidShader->setUniformValue("u_mv_matrix", vidQuadMatrix);
@@ -348,16 +330,19 @@ void GLWidget::paintGL()
             // Need to set these arrays up here as shader instances are shared between
             // all the videos:
             vidShader->enableAttributeArray("a_texCoord");
-            vidShader->setAttributeArray("a_texCoord", vidTriStripTexCoords);
+            //vidShader->setAttributeArray("a_texCoord", vidTriStripTexCoords);
+            vidShader->setAttributeArray("a_texCoord", this->vidTextures[vidIx].triStripTexCoords);
 
             if(this->vidTextures[vidIx].effect == VidShaderAlphaMask)
             {
                 vidShader->enableAttributeArray("a_alphaTexCoord");
-                vidShader->setAttributeArray("a_alphaTexCoord", vidTriStripAlphaTexCoords);
+                //vidShader->setAttributeArray("a_alphaTexCoord", vidTriStripAlphaTexCoords);
+                vidShader->setAttributeArray("a_alphaTexCoord", this->vidTextures[vidIx].triStripAlphaTexCoords);
             }
 
             vidShader->enableAttributeArray("a_vertex");
-            vidShader->setAttributeArray("a_vertex", vidTriStripVertices);
+            //vidShader->setAttributeArray("a_vertex", vidTriStripVertices);
+            vidShader->setAttributeArray("a_vertex", this->vidTextures[vidIx].triStripVertices);
 
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -417,6 +402,41 @@ void GLWidget::newFrame(int vidIx)
             // but do it to check for errors, so we don't need to check on every render
             // and program output doesn't go mad
             setVidShaderVars(vidIx, true);
+
+            GLfloat vidWidth = this->vidTextures[vidIx].width;
+            GLfloat vidHeight = this->vidTextures[vidIx].height;
+
+            this->vidTextures[vidIx].triStripTexCoords[0]      = QVector2D(vidWidth, 0.0f);
+            this->vidTextures[vidIx].triStripVertices[0]       = QVector2D(VIDTEXTURE_LEFT_X, VIDTEXTURE_TOP_Y);
+
+            this->vidTextures[vidIx].triStripTexCoords[1]      = QVector2D(0.0f, 0.0f);
+            this->vidTextures[vidIx].triStripVertices[1]       = QVector2D(VIDTEXTURE_RIGHT_X, VIDTEXTURE_TOP_Y);
+
+            this->vidTextures[vidIx].triStripTexCoords[2]      = QVector2D(vidWidth, vidHeight);
+            this->vidTextures[vidIx].triStripVertices[2]       = QVector2D(VIDTEXTURE_LEFT_X, VIDTEXTURE_BOT_Y);
+
+            this->vidTextures[vidIx].triStripTexCoords[3]      = QVector2D(0.0f, vidHeight);
+            this->vidTextures[vidIx].triStripVertices[3]       = QVector2D(VIDTEXTURE_RIGHT_X, VIDTEXTURE_BOT_Y);
+
+
+
+
+/*
+            float xVertexStart = qMin(VIDTEXTURE_RIGHT_X, VIDTEXTURE_LEFT_X);
+            float yVertexStart = qMin(VIDTEXTURE_TOP_Y, VIDTEXTURE_BOT_Y);
+            float xVertexIncrement = (qMax(VIDTEXTURE_RIGHT_X, VIDTEXTURE_LEFT_X) - qMin(VIDTEXTURE_RIGHT_X, VIDTEXTURE_LEFT_X)) / NUM_VIDTEXTURE_VERTICES_X;
+            float yVertexIncrement = (qMax(VIDTEXTURE_TOP_Y, VIDTEXTURE_BOT_Y) - qMin(VIDTEXTURE_TOP_Y, VIDTEXTURE_BOT_Y)) / NUM_VIDTEXTURE_VERTICES_Y;
+
+
+            for(int y = 0; y < NUM_VIDTEXTURE_VERTICES_Y; y++)
+            {
+                for(int x = 0; x < NUM_VIDTEXTURE_VERTICES_X; x++)
+                {
+
+
+                }
+            }
+*/
         }
 
 
@@ -755,6 +775,8 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
                         alphaTextureId = bindTexture(alphaTexImage.mirrored(true, true), GL_TEXTURE_RECTANGLE_ARB);
                         alphaTexWidth = alphaTexImage.width();
                         alphaTexHeight = alphaTexImage.height();
+                        // Update alpha tex co-ords in shader in case it is active:
+                        setVidShaderVars((this->vidTextures.size() - 1), true);
                         alphaTextureLoaded = true;
                     }
                 }
@@ -950,6 +972,11 @@ void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
         this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
         this->vidTextures[vidIx].shader->setUniformValue("u_alphaTexture", 1); // texture unit index
         if(printErrors) printOpenGLError(__FILE__, __LINE__);
+
+        this->vidTextures[vidIx].triStripAlphaTexCoords[0] = QVector2D(alphaTexWidth, 0.0f);
+        this->vidTextures[vidIx].triStripAlphaTexCoords[1] = QVector2D(0.0f, 0.0f);
+        this->vidTextures[vidIx].triStripAlphaTexCoords[2] = QVector2D(alphaTexWidth, alphaTexHeight);
+        this->vidTextures[vidIx].triStripAlphaTexCoords[3] = QVector2D(0.0f, alphaTexHeight);
         break;
 
     default:

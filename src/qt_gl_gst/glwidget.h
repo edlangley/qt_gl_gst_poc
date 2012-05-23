@@ -47,6 +47,13 @@ typedef enum
     VidShaderNoEffectNormalisedTexCoords = 4,
 } VidShaderEffectType;
 
+#define NUM_VIDTEXTURE_VERTICES_X    2
+#define NUM_VIDTEXTURE_VERTICES_Y    2
+#define VIDTEXTURE_LEFT_X            -1.3f
+#define VIDTEXTURE_RIGHT_X           1.3f
+#define VIDTEXTURE_TOP_Y             1.0f
+#define VIDTEXTURE_BOT_Y             -1.0f
+
 typedef struct _VidTextureInfo
 {
     GLuint texId;
@@ -58,6 +65,9 @@ typedef struct _VidTextureInfo
     QGLShaderProgram *shader;
     VidShaderEffectType effect;
 
+    QVector2D triStripVertices[NUM_VIDTEXTURE_VERTICES_X * NUM_VIDTEXTURE_VERTICES_Y];
+    QVector2D triStripTexCoords[NUM_VIDTEXTURE_VERTICES_X * NUM_VIDTEXTURE_VERTICES_Y];
+    QVector2D triStripAlphaTexCoords[NUM_VIDTEXTURE_VERTICES_X * NUM_VIDTEXTURE_VERTICES_Y];
 } VidTextureInfo;
 
 typedef struct _GLShaderModule
