@@ -67,7 +67,7 @@ GLWidget::~GLWidget()
 #define NUM_SHADERS_BRICKGLES       2
 GLShaderModule BrickGLESShaderList[NUM_SHADERS_BRICKGLES] =
 {
-#if 1
+#if GLES2
     { "shaders/brick-gles.vert", QGLShader::Vertex },
     { "shaders/brick-gles.frag", QGLShader::Fragment }
 #else
@@ -79,24 +79,26 @@ GLShaderModule BrickGLESShaderList[NUM_SHADERS_BRICKGLES] =
 #define NUM_SHADERS_VIDI420NOEFFECT_NORMALISED       3
 GLShaderModule VidI420NoEffectNormalisedShaderList[NUM_SHADERS_VIDI420NOEFFECT_NORMALISED] =
 {
-#if 1
+#if GLES2
     { "shaders/noeffect-gles.vert", QGLShader::Vertex },
     { "shaders/noeffect-gles.frag", QGLShader::Fragment },
     { "shaders/yuv2rgb-normalisedtexcoords-gles.frag", QGLShader::Fragment }
 #else
+    { "shaders/noeffect.vert", QGLShader::Vertex },
     { "shaders/noeffect.frag", QGLShader::Fragment },
-    { "shaders/yuv2rgb.frag", QGLShader::Fragment }
+    { "shaders/yuv2rgb-normalisedtexcoords.frag", QGLShader::Fragment }
 #endif
 };
 
 #define NUM_SHADERS_VIDI420NOEFFECT       3
 GLShaderModule VidI420NoEffectShaderList[NUM_SHADERS_VIDI420NOEFFECT] =
 {
-#if 1
+#if GLES2
     { "shaders/noeffect-gles.vert", QGLShader::Vertex },
     { "shaders/noeffect-gles.frag", QGLShader::Fragment },
     { "shaders/yuv2rgb-gles.frag", QGLShader::Fragment }
 #else
+    { "shaders/noeffect.vert", QGLShader::Vertex },
     { "shaders/noeffect.frag", QGLShader::Fragment },
     { "shaders/yuv2rgb.frag", QGLShader::Fragment }
 #endif
@@ -105,11 +107,12 @@ GLShaderModule VidI420NoEffectShaderList[NUM_SHADERS_VIDI420NOEFFECT] =
 #define NUM_SHADERS_VIDI420COLOURHILIGHT       3
 GLShaderModule VidI420ColourHilightShaderList[NUM_SHADERS_VIDI420COLOURHILIGHT] =
 {
-#if 1
+#if GLES2
     { "shaders/noeffect-gles.vert", QGLShader::Vertex },
     { "shaders/colourhilight-gles.frag", QGLShader::Fragment },
     { "shaders/yuv2rgb-gles.frag", QGLShader::Fragment }
 #else
+    { "shaders/noeffect.vert", QGLShader::Vertex },
     { "shaders/colourhilight.frag", QGLShader::Fragment },
     { "shaders/yuv2rgb.frag", QGLShader::Fragment }
 #endif
@@ -118,19 +121,26 @@ GLShaderModule VidI420ColourHilightShaderList[NUM_SHADERS_VIDI420COLOURHILIGHT] 
 #define NUM_SHADERS_VIDI420COLOURHILIGHTSWAP       3
 GLShaderModule VidI420ColourHilightSwapShaderList[NUM_SHADERS_VIDI420COLOURHILIGHTSWAP] =
 {
+#if GLES2
     { "shaders/noeffect-gles.vert", QGLShader::Vertex },
     { "shaders/colourhilightswap-gles.frag", QGLShader::Fragment },
     { "shaders/yuv2rgb-gles.frag", QGLShader::Fragment }
+#else
+    { "shaders/noeffect.vert", QGLShader::Vertex },
+    { "shaders/colourhilightswap.frag", QGLShader::Fragment },
+    { "shaders/yuv2rgb.frag", QGLShader::Fragment }
+#endif
 };
 
 #define NUM_SHADERS_VIDI420ALPHAMASK       3
 GLShaderModule VidI420AlphaMaskShaderList[NUM_SHADERS_VIDI420ALPHAMASK] =
 {
-#if 1
+#if GLES2
     { "shaders/alphamask-gles.vert", QGLShader::Vertex },
     { "shaders/alphamask-gles.frag", QGLShader::Fragment },
     { "shaders/yuv2rgb-gles.frag", QGLShader::Fragment }
 #else
+    { "shaders/alphamask.vert", QGLShader::Vertex },
     { "shaders/alphamask.frag", QGLShader::Fragment },
     { "shaders/yuv2rgb.frag", QGLShader::Fragment }
 #endif

@@ -5,7 +5,9 @@
 
 #extension GL_ARB_texture_rectangle : enable
 
-uniform sampler2DRect alphaTexture;
+uniform highp sampler2DRect u_alphaTexture;
+
+varying highp vec3 v_alphaTexCoord;
 
 vec4 yuv2rgb(void);
 
@@ -15,20 +17,9 @@ void main(void)
 	float alphaAverage;
 	vec4 rgbColour = yuv2rgb();
 
-	alphaColour = texture2DRect(alphaTexture, gl_TexCoord[1].xy);
+	alphaColour = texture2DRect(u_alphaTexture, v_alphaTexCoord.xy);
 	alphaAverage = alphaColour.r + alphaColour.g + alphaColour.b;
 	alphaAverage /= 3.0;
 
 	gl_FragColor = vec4(rgbColour.rgb, alphaAverage);
-/*
-	if(alphaAverage == 0.0)
-	{
-		gl_FragColor = vec4(rgbColour.rgb, 1.0);
-	}
-	else
-	{
-		gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
-	}
-*/
-	//gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
 }

@@ -1,8 +1,10 @@
 //
 // Vertex shader for procedural bricks
 //
-// Authors: Dave Baldwin, Steve Koren, Randi Rost
-//          based on a shader by Darwyn Peachey
+// Authors: Ed Langley
+//          based on a shader by Dave Baldwin, Steve Koren,
+//          Randi Rost
+//          which was based on a shader by Darwyn Peachey
 //
 // Copyright (c) 2002-2004 3Dlabs Inc. Ltd. 
 //
@@ -11,18 +13,35 @@
 
 uniform vec3 LightPosition;
 
-const float SpecularContribution = 0.3;
-const float DiffuseContribution  = 1.0 - SpecularContribution;
+const float mediump SpecularContribution = 0.3;
+const float mediump DiffuseContribution  = 1.0 - SpecularContribution;
 
-varying float LightIntensity;
-varying vec3  MCposition;
+uniform highp mat4 u_mvp_matrix;
+uniform highp mat4 u_mv_matrix;
+
+attribute highp vec4 a_vertex;
+attribute highp vec3 a_normal;
+attribute highp vec4 a_texCoord; // unused right now
+
+varying mediump float v_LightIntensity;
+varying mediump vec3  v_MCposition;
 
 void main(void)
 {
-    vec3 ecPosition = vec3 (gl_ModelViewMatrix * gl_Vertex);
-    vec3 tnorm      = normalize(gl_NormalMatrix * gl_Normal);
+//    vec3 ecPosition = vec3 (gl_ModelViewMatrix * vertex);
+    vec3 ecPosition = vec3 (u_mv_matrix * a_vertex);
+
+//    vec3 tnorm      = normalize(gl_NormalMatrix * normal);
+    vec3 tnorm      = normalize(u_mv_matrix * vec4(a_normal, 0.0));
+
     vec3 lightVec   = normalize(LightPosition - ecPosition);
-    vec3 reflectVec = reflect(-lightVec, tnorm);
+    // Using the reflection vector:
+//    vec3 reflectVec = reflect(-lightVec, tnorm);
+    vec3 reflectVec = (2.0 * tnorm * dot(lightVec, tnorm)) - lightVec;
+
+    // Using the half vector:
+    //vec3 halfVec    = normalize(-ecPosition - LightPosition);
+
     vec3 viewVec    = normalize(-ecPosition);
     float diffuse   = max(dot(lightVec, tnorm), 0.0);
     float spec      = 0.0;
@@ -30,12 +49,16 @@ void main(void)
     if (diffuse > 0.0)
     {
         spec = max(dot(reflectVec, viewVec), 0.0);
-        spec = pow(spec, 16.0);
+        //spec = max(dot(halfVec, tnorm), 0.0);
+
+        spec = pow(spec, 46.0);
     }
 
-    LightIntensity  = DiffuseContribution * diffuse +
+    v_LightIntensity  = DiffuseContribution * diffuse +
                       SpecularContribution * spec;
 
-    MCposition      = gl_Vertex.xyz;
-    gl_Position     = ftransform();
+    v_MCposition      = a_vertex.xyz;
+//    gl_Position     = ftransform();
+//    gl_Position     = (gl_ModelViewProjectionMatrix * vertex);
+    gl_Position     = (u_mvp_matrix * a_vertex);
 }
