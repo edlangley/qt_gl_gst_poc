@@ -5,13 +5,15 @@
 
 #extension GL_ARB_texture_rectangle : enable
 
-uniform vec4 u_colrToDisplayMin, u_colrToDisplayMax, u_componentToSwap;
+uniform vec4 u_colrToDisplayMin, u_colrToDisplayMax;
+uniform vec4 u_componentSwapR, u_componentSwapG, u_componentSwapB;
 
 vec4 yuv2rgb(void);
 
 void main(void)
 {
 	vec4 rgbColour = yuv2rgb();
+	vec4 swapColourSum;
 	vec4 swappedColour;
 	float monoComponent;
 
@@ -19,19 +21,23 @@ void main(void)
 	   (rgbColour.r > u_colrToDisplayMin.g) && (rgbColour.r < u_colrToDisplayMax.g) &&
 	   (rgbColour.r > u_colrToDisplayMin.b) && (rgbColour.r < u_colrToDisplayMax.b))
 	{
-		if(u_componentToSwap.b > (u_componentToSwap.r + u_componentToSwap.g))
-		{
-			swappedColour.b = (rgbColour.r + rgbColour.g)/2;
-			swappedColour.r = rgbColour.b;
-			swappedColour.g = rgbColour.b;
-		}
-
-		// TODO: same for red and green ....
 /*
 		swappedColour.r = rgbColour.g;
 		swappedColour.g = rgbColour.b;
-		swappedColour.b = rgbColour.r
-*/		
+		swappedColour.b = rgbColour.r;
+*/
+
+		swapColourSum = rgbColour * u_componentSwapR;
+		//swappedColour.r = (swapColourSum.r + swapColourSum.g + swapColourSum.b)/3;
+		swappedColour.r = clamp((swapColourSum.r + swapColourSum.g + swapColourSum.b), 0.0, 1.0);
+		
+		swapColourSum  = rgbColour * u_componentSwapG;
+		//swappedColour.g = (swapColourSum.r + swapColourSum.g + swapColourSum.b)/3;
+		swappedColour.g = clamp((swapColourSum.r + swapColourSum.g + swapColourSum.b), 0.0, 1.0);
+
+		swapColourSum  = rgbColour * u_componentSwapB;
+		//swappedColour.b = (swapColourSum.r + swapColourSum.g + swapColourSum.b)/3;
+		swappedColour.b = clamp((swapColourSum.r + swapColourSum.g + swapColourSum.b), 0.0, 1.0);
 
 		swappedColour.a = 1.0;
 		gl_FragColor = swappedColour;

@@ -37,7 +37,10 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     // Video shader effects vars
     ColourHilightRangeMin = QVector4D(0.0, 0.0, 0.0, 0.0);
     ColourHilightRangeMax = QVector4D(0.2, 0.2, 1.0, 1.0); // show shades of blue as they are
-    ColourComponentToSwap = QVector4D(0.0, 0.0, 1.0, 0.0);
+    ColourComponentSwapR = QVector4D(1.0, 1.0, 1.0, 0.0);
+    ColourComponentSwapG = QVector4D(1.0, 1.0, 0.0, 0.0);
+    ColourComponentSwapB = QVector4D(1.0, 1.0, 1.0, 0.0);
+    ColourSwapDirUpwards = true;
     alphaTextureLoaded = false;
 
     // Video pipeline
@@ -296,6 +299,13 @@ void GLWidget::paintGL()
             setVidShaderVars(vidIx, false);
             printOpenGLError(__FILE__, __LINE__);
 
+            if(this->vidTextures[vidIx].effect == VidShaderColourHilightSwap)
+            {
+                this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapR", ColourComponentSwapR);
+                this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapG", ColourComponentSwapG);
+                this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapB", ColourComponentSwapB);
+            }
+
             GLfloat vidWidth = this->vidTextures[vidIx].width;
             GLfloat vidHeight = this->vidTextures[vidIx].height;
             QGLShaderProgram *vidShader = this->vidTextures[vidIx].shader;
@@ -550,6 +560,59 @@ void GLWidget::animate()
         xRot = qNormalizeAngle(xRot + (8 * fYInertia));
         yRot = qNormalizeAngle(yRot + (8 * fXInertia));
     }
+
+    /* Colour swapping effect shader */
+
+    if(ColourSwapDirUpwards)
+    {
+        if((ColourComponentSwapB.z() < 0.1) || (ColourComponentSwapG.z() > 0.9))
+        {
+            ColourSwapDirUpwards = false;
+        }
+        else
+        {
+            ColourComponentSwapB.setZ(ColourComponentSwapB.z() - 0.01);
+            ColourComponentSwapG.setZ(ColourComponentSwapG.z() + 0.01);
+        }
+    }
+    else
+    {
+        if((ColourComponentSwapB.z() > 0.9) || (ColourComponentSwapG.z() < 0.1))
+        {
+            ColourSwapDirUpwards = true;
+        }
+        else
+        {
+            ColourComponentSwapB.setZ(ColourComponentSwapB.z() + 0.01);
+            ColourComponentSwapG.setZ(ColourComponentSwapG.z() - 0.01);
+        }
+    }
+
+
+    /*
+    if(ColourSwapDirUpwards)
+    {
+        if((ColourComponentSwapR.z() > 0.9))
+        {
+            ColourSwapDirUpwards = false;
+        }
+        else
+        {
+            ColourComponentSwapR.setZ(ColourComponentSwapR.z() + 0.01);
+        }
+    }
+    else
+    {
+        if((ColourComponentSwapR.z() < 0.1))
+        {
+            ColourSwapDirUpwards = false;
+        }
+        else
+        {
+            ColourComponentSwapR.setZ(ColourComponentSwapR.z() - 0.01);
+        }
+    }
+    */
 
     updateGL();
 }
@@ -875,7 +938,9 @@ void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
         this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
         this->vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMin", ColourHilightRangeMin);
         this->vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMax", ColourHilightRangeMax);
-        this->vidTextures[vidIx].shader->setUniformValue("u_componentToSwap", ColourComponentToSwap);
+        this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapR", ColourComponentSwapR);
+        this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapG", ColourComponentSwapG);
+        this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapB", ColourComponentSwapB);
         if(printErrors) printOpenGLError(__FILE__, __LINE__);
         break;
 

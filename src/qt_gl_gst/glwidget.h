@@ -149,7 +149,10 @@ private:
     // Video shader effects vars - for simplicitys sake make them general to all vids
     QVector4D ColourHilightRangeMin;
     QVector4D ColourHilightRangeMax;
-    QVector4D ColourComponentToSwap;
+    QVector4D ColourComponentSwapR;
+    QVector4D ColourComponentSwapG;
+    QVector4D ColourComponentSwapB;
+    bool ColourSwapDirUpwards;
     GLuint alphaTextureId;
     bool alphaTextureLoaded;
     GLuint alphaTexWidth;
