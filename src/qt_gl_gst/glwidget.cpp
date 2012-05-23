@@ -37,6 +37,7 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     // Video shader effects vars
     ColourHilightRangeMin = QVector4D(0.0, 0.0, 0.0, 0.0);
     ColourHilightRangeMax = QVector4D(0.2, 0.2, 1.0, 1.0); // show shades of blue as they are
+    ColourComponentToSwap = QVector4D(0.0, 0.0, 1.0, 0.0);
     alphaTextureLoaded = false;
 
     // Video pipeline
@@ -101,11 +102,12 @@ GLShaderModule VidI420NoEffectShaderList[NUM_SHADERS_VIDI420NOEFFECT] =
 #endif
 };
 
-#define NUM_SHADERS_VIDI420COLOURHILIGHT       2
+#define NUM_SHADERS_VIDI420COLOURHILIGHT       3
 GLShaderModule VidI420ColourHilightShaderList[NUM_SHADERS_VIDI420COLOURHILIGHT] =
 {
-#if 0
-    { "shaders/noeffect-gles.frag", QGLShader::Fragment },
+#if 1
+    { "shaders/noeffect-gles.vert", QGLShader::Vertex },
+    { "shaders/colourhilight-gles.frag", QGLShader::Fragment },
     { "shaders/yuv2rgb-gles.frag", QGLShader::Fragment }
 #else
     { "shaders/colourhilight.frag", QGLShader::Fragment },
@@ -113,11 +115,20 @@ GLShaderModule VidI420ColourHilightShaderList[NUM_SHADERS_VIDI420COLOURHILIGHT] 
 #endif
 };
 
-#define NUM_SHADERS_VIDI420ALPHAMASK       2
+#define NUM_SHADERS_VIDI420COLOURHILIGHTSWAP       3
+GLShaderModule VidI420ColourHilightSwapShaderList[NUM_SHADERS_VIDI420COLOURHILIGHTSWAP] =
+{
+    { "shaders/noeffect-gles.vert", QGLShader::Vertex },
+    { "shaders/colourhilightswap-gles.frag", QGLShader::Fragment },
+    { "shaders/yuv2rgb-gles.frag", QGLShader::Fragment }
+};
+
+#define NUM_SHADERS_VIDI420ALPHAMASK       3
 GLShaderModule VidI420AlphaMaskShaderList[NUM_SHADERS_VIDI420ALPHAMASK] =
 {
-#if 0
-    { "shaders/noeffect-gles.frag", QGLShader::Fragment },
+#if 1
+    { "shaders/alphamask-gles.vert", QGLShader::Vertex },
+    { "shaders/alphamask-gles.frag", QGLShader::Fragment },
     { "shaders/yuv2rgb-gles.frag", QGLShader::Fragment }
 #else
     { "shaders/alphamask.frag", QGLShader::Fragment },
@@ -161,6 +172,7 @@ void GLWidget::initializeGL()
     setupShader(&I420NoEffectNormalised, VidI420NoEffectNormalisedShaderList, NUM_SHADERS_VIDI420NOEFFECT_NORMALISED);
     setupShader(&I420NoEffect, VidI420NoEffectShaderList, NUM_SHADERS_VIDI420NOEFFECT);
     setupShader(&I420ColourHilight, VidI420ColourHilightShaderList, NUM_SHADERS_VIDI420COLOURHILIGHT);
+    setupShader(&I420ColourHilightSwap, VidI420ColourHilightSwapShaderList, NUM_SHADERS_VIDI420COLOURHILIGHTSWAP);
     setupShader(&I420AlphaMask, VidI420AlphaMaskShaderList, NUM_SHADERS_VIDI420ALPHAMASK);
 
     // Set uniforms for vid shaders along with other stream details when first
@@ -291,8 +303,6 @@ void GLWidget::paintGL()
                 vidQuadMatrix.translate(0.0, 0.0, 2.0);
             }
 
-            //model->Draw(vidQuadMatrix, projectionMatrix, vidShader, false);
-//#if 1
             // Move these arrays into VidTextureInfo structure and populate
             // in setVidShaderVars():
             vidTriStripTexCoords[0]      = QVector2D(vidWidth, 0.0f);
@@ -337,7 +347,6 @@ void GLWidget::paintGL()
                 vidShader->disableAttributeArray("a_alphaTexCoord");
             }
             vidShader->disableAttributeArray("a_texCoord");
-//#endif
         }
     }
 }
@@ -794,6 +803,9 @@ void GLWidget::setAppropriateVidShader(int vidIx)
         case VidShaderColourHilight:
             this->vidTextures[vidIx].shader = &I420ColourHilight;
             break;
+        case VidShaderColourHilightSwap:
+            this->vidTextures[vidIx].shader = &I420ColourHilightSwap;
+            break;
         case VidShaderAlphaMask:
             this->vidTextures[vidIx].shader = &I420AlphaMask;
             break;
@@ -828,19 +840,29 @@ void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
         break;
 
     case VidShaderColourHilight:
-        this->vidTextures[vidIx].shader->setUniformValue("vidTexture", 0); // texture unit index
-        this->vidTextures[vidIx].shader->setUniformValue("yHeight", (GLfloat)this->vidTextures[vidIx].height);
-        this->vidTextures[vidIx].shader->setUniformValue("yWidth", (GLfloat)this->vidTextures[vidIx].width);
-        this->vidTextures[vidIx].shader->setUniformValue("colrToDisplayMin", ColourHilightRangeMin);
-        this->vidTextures[vidIx].shader->setUniformValue("colrToDisplayMax", ColourHilightRangeMax);
+        this->vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
+        this->vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->vidTextures[vidIx].height);
+        this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
+        this->vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMin", ColourHilightRangeMin);
+        this->vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMax", ColourHilightRangeMax);
+        if(printErrors) printOpenGLError(__FILE__, __LINE__);
+        break;
+
+    case VidShaderColourHilightSwap:
+        this->vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
+        this->vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->vidTextures[vidIx].height);
+        this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
+        this->vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMin", ColourHilightRangeMin);
+        this->vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMax", ColourHilightRangeMax);
+        this->vidTextures[vidIx].shader->setUniformValue("u_componentToSwap", ColourComponentToSwap);
         if(printErrors) printOpenGLError(__FILE__, __LINE__);
         break;
 
     case VidShaderAlphaMask:
-        this->vidTextures[vidIx].shader->setUniformValue("vidTexture", 0); // texture unit index
-        this->vidTextures[vidIx].shader->setUniformValue("yHeight", (GLfloat)this->vidTextures[vidIx].height);
-        this->vidTextures[vidIx].shader->setUniformValue("yWidth", (GLfloat)this->vidTextures[vidIx].width);
-        this->vidTextures[vidIx].shader->setUniformValue("alphaTexture", 1); // texture unit index
+        this->vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
+        this->vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->vidTextures[vidIx].height);
+        this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
+        this->vidTextures[vidIx].shader->setUniformValue("u_alphaTexture", 1); // texture unit index
         if(printErrors) printOpenGLError(__FILE__, __LINE__);
         break;
 

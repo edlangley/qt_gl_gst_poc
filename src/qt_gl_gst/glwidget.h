@@ -40,9 +40,11 @@ typedef enum
     VidShaderFirst = 0,
     VidShaderNoEffect = 0,
     VidShaderColourHilight = 1,
-    VidShaderAlphaMask = 2,
-    VidShaderNoEffectNormalisedTexCoords = 3,
+    VidShaderColourHilightSwap = 2,
+    VidShaderAlphaMask = 3,
     VidShaderLast = 3,
+    // Any shaders after last should not be toggled through with "next shader" key:
+    VidShaderNoEffectNormalisedTexCoords = 4,
 } VidShaderEffectType;
 
 typedef struct _VidTextureInfo
@@ -141,11 +143,13 @@ private:
     QGLShaderProgram I420NoEffectNormalised;
     QGLShaderProgram I420NoEffect;
     QGLShaderProgram I420ColourHilight;
+    QGLShaderProgram I420ColourHilightSwap;
     QGLShaderProgram I420AlphaMask;
 
     // Video shader effects vars - for simplicitys sake make them general to all vids
     QVector4D ColourHilightRangeMin;
     QVector4D ColourHilightRangeMax;
+    QVector4D ColourComponentToSwap;
     GLuint alphaTextureId;
     bool alphaTextureLoaded;
     GLuint alphaTexWidth;
