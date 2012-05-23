@@ -93,6 +93,20 @@ GLShaderModule VidI420NoEffectNormalisedShaderList[NUM_SHADERS_VIDI420NOEFFECT_N
 #endif
 };
 
+#define NUM_SHADERS_VIDI420LIT_NORMALISED       3
+GLShaderModule VidI420LitNormalisedShaderList[NUM_SHADERS_VIDI420LIT_NORMALISED] =
+{
+#if GLES2
+    { "shaders/noeffect-gles.vert", QGLShader::Vertex },
+    { "shaders/noeffect-gles.frag", QGLShader::Fragment },
+    { "shaders/yuv2rgb-normalisedtexcoords-gles.frag", QGLShader::Fragment }
+#else
+    { "shaders/vidlighting.vert", QGLShader::Vertex },
+    { "shaders/vidlighting.frag", QGLShader::Fragment },
+    { "shaders/yuv2rgb-normalisedtexcoords.frag", QGLShader::Fragment }
+#endif
+};
+
 #define NUM_SHADERS_VIDI420NOEFFECT       3
 GLShaderModule VidI420NoEffectShaderList[NUM_SHADERS_VIDI420NOEFFECT] =
 {
@@ -183,6 +197,7 @@ void GLWidget::initializeGL()
     printOpenGLError(__FILE__, __LINE__);
 
     setupShader(&I420NoEffectNormalised, VidI420NoEffectNormalisedShaderList, NUM_SHADERS_VIDI420NOEFFECT_NORMALISED);
+    setupShader(&I420LitNormalised, VidI420LitNormalisedShaderList, NUM_SHADERS_VIDI420LIT_NORMALISED);
     setupShader(&I420NoEffect, VidI420NoEffectShaderList, NUM_SHADERS_VIDI420NOEFFECT);
     setupShader(&I420ColourHilight, VidI420ColourHilightShaderList, NUM_SHADERS_VIDI420COLOURHILIGHT);
     setupShader(&I420ColourHilightSwap, VidI420ColourHilightSwapShaderList, NUM_SHADERS_VIDI420COLOURHILIGHTSWAP);
@@ -250,7 +265,8 @@ void GLWidget::paintGL()
         // TODO: load texture uniform into shader
         // ....
 
-        this->vidTextures[0].effect = VidShaderNoEffectNormalisedTexCoords;
+        //this->vidTextures[0].effect = VidShaderNoEffectNormalisedTexCoords;
+        this->vidTextures[0].effect = VidShaderLitNormalisedTexCoords;
         setAppropriateVidShader(0);
         this->vidTextures[0].shader->bind();
         setVidShaderVars(0, false);
@@ -906,6 +922,9 @@ void GLWidget::setAppropriateVidShader(int vidIx)
         case VidShaderNoEffectNormalisedTexCoords:
             this->vidTextures[vidIx].shader = &I420NoEffectNormalised;
             break;
+        case VidShaderLitNormalisedTexCoords:
+            this->vidTextures[vidIx].shader = &I420LitNormalised;
+            break;
         case VidShaderColourHilight:
             this->vidTextures[vidIx].shader = &I420ColourHilight;
             break;
@@ -941,6 +960,16 @@ void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
         this->vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
         this->vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->vidTextures[vidIx].height);
         this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
+
+        if(printErrors) printOpenGLError(__FILE__, __LINE__);
+        break;
+
+    case VidShaderLitNormalisedTexCoords:
+        this->vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
+        this->vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->vidTextures[vidIx].height);
+        this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
+
+        this->vidTextures[vidIx].shader->setUniformValue("u_lightPosition", QVector3D(0.0, 0.0, 4.0));
 
         if(printErrors) printOpenGLError(__FILE__, __LINE__);
         break;

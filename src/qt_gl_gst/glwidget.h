@@ -45,6 +45,7 @@ typedef enum
     VidShaderLast = 3,
     // Any shaders after last should not be toggled through with "next shader" key:
     VidShaderNoEffectNormalisedTexCoords = 4,
+    VidShaderLitNormalisedTexCoords = 5,
 } VidShaderEffectType;
 
 #define NUM_VIDTEXTURE_VERTICES_X    2
@@ -151,6 +152,7 @@ private:
 
     QGLShaderProgram brickProg;
     QGLShaderProgram I420NoEffectNormalised;
+    QGLShaderProgram I420LitNormalised;
     QGLShaderProgram I420NoEffect;
     QGLShaderProgram I420ColourHilight;
     QGLShaderProgram I420ColourHilightSwap;
