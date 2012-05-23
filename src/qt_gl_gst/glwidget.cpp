@@ -482,7 +482,18 @@ void GLWidget::gstThreadFinished(int vidIx)
     }
     else
     {
-        // TODO: restart video
+        delete(this->gstThreads[vidIx]);
+        this->vidTextures[vidIx].texInfoValid = false;
+
+        this->gstThreads[vidIx] =
+          new GstThread(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this);
+
+        QObject::connect(this->gstThreads[vidIx], SIGNAL(finished(int)),
+                         this, SLOT(gstThreadFinished(int)));
+        QObject::connect(this, SIGNAL(closeRequested()),
+                         this->gstThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
+
+        this->gstThreads[vidIx]->start();
     }
 }
 
