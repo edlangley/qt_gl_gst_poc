@@ -15,16 +15,22 @@ DEFINES += UNIX
 
 SOURCES += main.cpp \
     glwidget.cpp \
+    model.cpp \
+    gstpipeline.cpp \
+    vidthread.cpp \
     pipeline.cpp \
-    gstthread.cpp \
-    model.cpp
+    shaderlists.cpp \
+    tigstpipeline.cpp
 
 HEADERS  += \
     glwidget.h \
-    pipeline.h \
-    gstthread.h \
     AsyncQueue.h \
-    model.h
+    model.h \
+    gstpipeline.h \
+    vidthread.h \
+    pipeline.h \
+    shaderlists.h \
+    tigstpipeline.h
 
 LIBS += -lgstreamer-0.10 \
     -lgstinterfaces-0.10 \

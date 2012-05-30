@@ -1,0 +1,29 @@
+#ifndef SHADERLISTS_H
+#define SHADERLISTS_H
+
+#include "glwidget.h"
+
+#define NUM_SHADERS_BRICKGLES       2
+extern GLShaderModule BrickGLESShaderList[NUM_SHADERS_BRICKGLES];
+
+#define NUM_SHADERS_VIDI420NOEFFECT_NORMALISED       3
+extern GLShaderModule VidI420NoEffectNormalisedShaderList[NUM_SHADERS_VIDI420NOEFFECT_NORMALISED];
+
+#define NUM_SHADERS_VIDI420LIT_NORMALISED       3
+extern GLShaderModule VidI420LitNormalisedShaderList[NUM_SHADERS_VIDI420LIT_NORMALISED];
+
+#define NUM_SHADERS_VIDI420NOEFFECT       3
+extern GLShaderModule VidI420NoEffectShaderList[NUM_SHADERS_VIDI420NOEFFECT];
+
+#define NUM_SHADERS_VIDI420COLOURHILIGHT       3
+extern GLShaderModule VidI420ColourHilightShaderList[NUM_SHADERS_VIDI420COLOURHILIGHT];
+
+#define NUM_SHADERS_VIDI420COLOURHILIGHTSWAP       3
+extern GLShaderModule VidI420ColourHilightSwapShaderList[NUM_SHADERS_VIDI420COLOURHILIGHTSWAP];
+
+#define NUM_SHADERS_VIDI420ALPHAMASK       3
+extern GLShaderModule VidI420AlphaMaskShaderList[NUM_SHADERS_VIDI420ALPHAMASK];
+
+
+
+#endif // SHADERLISTS_H

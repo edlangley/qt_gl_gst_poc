@@ -1,4 +1,5 @@
 #include "glwidget.h"
+#include "shaderlists.h"
 
 #ifdef GLES2
  #define GL_TEXTURE_RECTANGLE_ARB            GL_TEXTURE_2D
@@ -52,11 +53,11 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     // Instantiate video pipeline for each filename specified
     for(int vidIx = 0; vidIx < this->videoLoc.size(); vidIx++)
     {
-        this->gstThreads.push_back(new GstThread(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this));
-        QObject::connect(this->gstThreads[vidIx], SIGNAL(finished(int)),
+        this->vidThreads.push_back(new VidThread(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this));
+        QObject::connect(this->vidThreads[vidIx], SIGNAL(finished(int)),
                          this, SLOT(gstThreadFinished(int)));
         QObject::connect(this, SIGNAL(closeRequested()),
-                         this->gstThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
+                         this->vidThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
     }
 
     model = NULL;
@@ -65,103 +66,6 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
 GLWidget::~GLWidget()
 {
 }
-
-// Arrays containing lists of shaders which can be linked and used together:
-#define NUM_SHADERS_BRICKGLES       2
-GLShaderModule BrickGLESShaderList[NUM_SHADERS_BRICKGLES] =
-{
-#if GLES2
-    { "shaders/brick-gles.vert", QGLShader::Vertex },
-    { "shaders/brick-gles.frag", QGLShader::Fragment }
-#else
-    { "shaders/brick.vert", QGLShader::Vertex },
-    { "shaders/brick.frag", QGLShader::Fragment }
-#endif
-};
-
-#define NUM_SHADERS_VIDI420NOEFFECT_NORMALISED       3
-GLShaderModule VidI420NoEffectNormalisedShaderList[NUM_SHADERS_VIDI420NOEFFECT_NORMALISED] =
-{
-#if GLES2
-    { "shaders/noeffect-gles.vert", QGLShader::Vertex },
-    { "shaders/noeffect-gles.frag", QGLShader::Fragment },
-    { "shaders/yuv2rgb-normalisedtexcoords-gles.frag", QGLShader::Fragment }
-#else
-    { "shaders/noeffect.vert", QGLShader::Vertex },
-    { "shaders/noeffect.frag", QGLShader::Fragment },
-    { "shaders/yuv2rgb-normalisedtexcoords.frag", QGLShader::Fragment }
-#endif
-};
-
-#define NUM_SHADERS_VIDI420LIT_NORMALISED       3
-GLShaderModule VidI420LitNormalisedShaderList[NUM_SHADERS_VIDI420LIT_NORMALISED] =
-{
-#if GLES2
-    { "shaders/noeffect-gles.vert", QGLShader::Vertex },
-    { "shaders/noeffect-gles.frag", QGLShader::Fragment },
-    { "shaders/yuv2rgb-normalisedtexcoords-gles.frag", QGLShader::Fragment }
-#else
-    { "shaders/vidlighting.vert", QGLShader::Vertex },
-    { "shaders/vidlighting.frag", QGLShader::Fragment },
-    { "shaders/yuv2rgb-normalisedtexcoords.frag", QGLShader::Fragment }
-#endif
-};
-
-#define NUM_SHADERS_VIDI420NOEFFECT       3
-GLShaderModule VidI420NoEffectShaderList[NUM_SHADERS_VIDI420NOEFFECT] =
-{
-#if GLES2
-    { "shaders/noeffect-gles.vert", QGLShader::Vertex },
-    { "shaders/noeffect-gles.frag", QGLShader::Fragment },
-    { "shaders/yuv2rgb-gles.frag", QGLShader::Fragment }
-#else
-    { "shaders/noeffect.vert", QGLShader::Vertex },
-    { "shaders/noeffect.frag", QGLShader::Fragment },
-    { "shaders/yuv2rgb.frag", QGLShader::Fragment }
-#endif
-};
-
-#define NUM_SHADERS_VIDI420COLOURHILIGHT       3
-GLShaderModule VidI420ColourHilightShaderList[NUM_SHADERS_VIDI420COLOURHILIGHT] =
-{
-#if GLES2
-    { "shaders/noeffect-gles.vert", QGLShader::Vertex },
-    { "shaders/colourhilight-gles.frag", QGLShader::Fragment },
-    { "shaders/yuv2rgb-gles.frag", QGLShader::Fragment }
-#else
-    { "shaders/noeffect.vert", QGLShader::Vertex },
-    { "shaders/colourhilight.frag", QGLShader::Fragment },
-    { "shaders/yuv2rgb.frag", QGLShader::Fragment }
-#endif
-};
-
-#define NUM_SHADERS_VIDI420COLOURHILIGHTSWAP       3
-GLShaderModule VidI420ColourHilightSwapShaderList[NUM_SHADERS_VIDI420COLOURHILIGHTSWAP] =
-{
-#if GLES2
-    { "shaders/noeffect-gles.vert", QGLShader::Vertex },
-    { "shaders/colourhilightswap-gles.frag", QGLShader::Fragment },
-    { "shaders/yuv2rgb-gles.frag", QGLShader::Fragment }
-#else
-    { "shaders/noeffect.vert", QGLShader::Vertex },
-    { "shaders/colourhilightswap.frag", QGLShader::Fragment },
-    { "shaders/yuv2rgb.frag", QGLShader::Fragment }
-#endif
-};
-
-#define NUM_SHADERS_VIDI420ALPHAMASK       3
-GLShaderModule VidI420AlphaMaskShaderList[NUM_SHADERS_VIDI420ALPHAMASK] =
-{
-#if GLES2
-    { "shaders/alphamask-gles.vert", QGLShader::Vertex },
-    { "shaders/alphamask-gles.frag", QGLShader::Fragment },
-    { "shaders/yuv2rgb-gles.frag", QGLShader::Fragment }
-#else
-    { "shaders/alphamask.vert", QGLShader::Vertex },
-    { "shaders/alphamask.frag", QGLShader::Fragment },
-    { "shaders/yuv2rgb.frag", QGLShader::Fragment }
-#endif
-};
 
 void GLWidget::initializeGL()
 {
@@ -188,8 +92,10 @@ void GLWidget::initializeGL()
 
     setupShader(&brickProg, BrickGLESShaderList, NUM_SHADERS_BRICKGLES);
     // Set up initial uniform values
-    brickProg.setUniformValue("BrickColor", QVector3D(1.0, 0.3, 0.2));
-    brickProg.setUniformValue("MortarColor", QVector3D(0.85, 0.86, 0.84));
+//    brickProg.setUniformValue("BrickColor", QVector3D(1.0, 0.3, 0.2));
+//    brickProg.setUniformValue("MortarColor", QVector3D(0.85, 0.86, 0.84));
+    brickProg.setUniformValue("BrickColor", QVector3D(0.0, 0.5, 1.0));
+    brickProg.setUniformValue("MortarColor", QVector3D(0.0, 0.5, 1.0));
     brickProg.setUniformValue("BrickSize", QVector3D(0.30, 0.15, 0.30));
     brickProg.setUniformValue("BrickPct", QVector3D(0.90, 0.85, 0.90));
     brickProg.setUniformValue("LightPosition", QVector3D(0.0, 0.0, 4.0));
@@ -208,7 +114,7 @@ void GLWidget::initializeGL()
 
 
     // Create entry in tex info vector for all pipelines
-    for(int vidIx = 0; vidIx < this->gstThreads.size(); vidIx++)
+    for(int vidIx = 0; vidIx < this->vidThreads.size(); vidIx++)
     {
         VidTextureInfo newInfo;
         glGenTextures(1, &newInfo.texId);
@@ -219,9 +125,9 @@ void GLWidget::initializeGL()
         this->vidTextures.push_back(newInfo);
     }
 
-    for(int vidIx = 0; vidIx < this->gstThreads.size(); vidIx++)
+    for(int vidIx = 0; vidIx < this->vidThreads.size(); vidIx++)
     {
-        this->gstThreads[vidIx]->start();
+        this->vidThreads[vidIx]->start();
     }
 
 
@@ -261,9 +167,6 @@ void GLWidget::paintGL()
     case ModelEffectVideo:
         glActiveTexture(GL_TEXTURE0_ARB);
         glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[0].texId);
-
-        // TODO: load texture uniform into shader
-        // ....
 
         //this->vidTextures[0].effect = VidShaderNoEffectNormalisedTexCoords;
         this->vidTextures[0].effect = VidShaderLitNormalisedTexCoords;
@@ -385,10 +288,10 @@ void GLWidget::resizeGL(int wid, int ht)
 
 void GLWidget::newFrame(int vidIx)
 {
-    if(this->gstThreads[vidIx])
+    if(this->vidThreads[vidIx])
     {
 
-        Pipeline *pipeline = this->gstThreads[vidIx]->getPipeline();
+        Pipeline *pipeline = this->vidThreads[vidIx]->getPipeline();
         if(!pipeline)
           return;
 
@@ -469,7 +372,7 @@ void GLWidget::newFrame(int vidIx)
                        this->vidTextures[vidIx].width,
                        1.5f*this->vidTextures[vidIx].height,
                        0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                       GST_BUFFER_DATA(this->vidTextures[vidIx].buffer));
+                       PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer));
 
         printOpenGLError(__FILE__, __LINE__);
 
@@ -482,21 +385,21 @@ void GLWidget::gstThreadFinished(int vidIx)
 {
     if(this->closing)
     {
-        delete(this->gstThreads[vidIx]);
-        this->gstThreads.replace(vidIx, NULL);
+        delete(this->vidThreads[vidIx]);
+        this->vidThreads.replace(vidIx, NULL);
         this->vidTextures[vidIx].texInfoValid = false;
 
         // check if any gst threads left, if not close
         bool allFinished = true;
-        for(int i = 0; i < this->gstThreads.size(); i++)
+        for(int i = 0; i < this->vidThreads.size(); i++)
         {
-            if(this->gstThreads[i] != NULL)
+            if(this->vidThreads[i] != NULL)
             {
                 // catch any threads which were already finished at quitting time
-                if(this->gstThreads[i]->isFinished())
+                if(this->vidThreads[i]->isFinished())
                 {
-                    delete(this->gstThreads[vidIx]);
-                    this->gstThreads.replace(vidIx, NULL);
+                    delete(this->vidThreads[vidIx]);
+                    this->vidThreads.replace(vidIx, NULL);
                     this->vidTextures[vidIx].texInfoValid = false;
                 }
                 else
@@ -511,7 +414,7 @@ void GLWidget::gstThreadFinished(int vidIx)
             close();
         }
     }
-    else if(this->gstThreads[vidIx]->chooseNew())
+    else if(this->vidThreads[vidIx]->chooseNew())
     {
         // TODO: call a choosenewvid function here and do that from keyboard event handler if pipeline already stopped
 
@@ -521,35 +424,35 @@ void GLWidget::gstThreadFinished(int vidIx)
 
         if(newFileName.isNull() == false)
         {
-            delete(this->gstThreads[vidIx]);
+            delete(this->vidThreads[vidIx]);
             this->vidTextures[vidIx].texInfoValid = false;
 
             this->videoLoc[vidIx] = newFileName;
-            this->gstThreads[vidIx] =
-              new GstThread(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this);
+            this->vidThreads[vidIx] =
+              new VidThread(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this);
 
-            QObject::connect(this->gstThreads[vidIx], SIGNAL(finished(int)),
+            QObject::connect(this->vidThreads[vidIx], SIGNAL(finished(int)),
                              this, SLOT(gstThreadFinished(int)));
             QObject::connect(this, SIGNAL(closeRequested()),
-                             this->gstThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
+                             this->vidThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
 
-            this->gstThreads[vidIx]->start();
+            this->vidThreads[vidIx]->start();
         }
     }
     else
     {
-        delete(this->gstThreads[vidIx]);
+        delete(this->vidThreads[vidIx]);
         this->vidTextures[vidIx].texInfoValid = false;
 
-        this->gstThreads[vidIx] =
-          new GstThread(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this);
+        this->vidThreads[vidIx] =
+          new VidThread(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this);
 
-        QObject::connect(this->gstThreads[vidIx], SIGNAL(finished(int)),
+        QObject::connect(this->vidThreads[vidIx], SIGNAL(finished(int)),
                          this, SLOT(gstThreadFinished(int)));
         QObject::connect(this, SIGNAL(closeRequested()),
-                         this->gstThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
+                         this->vidThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
 
-        this->gstThreads[vidIx]->start();
+        this->vidThreads[vidIx]->start();
     }
 }
 
@@ -816,8 +719,8 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
         case Qt::Key_V:
             {
                 int lastVidDrawn = this->vidTextures.size() - 1;
-                this->gstThreads[lastVidDrawn]->setChooseNewOnFinished();
-                this->gstThreads[lastVidDrawn]->stop();
+                this->vidThreads[lastVidDrawn]->setChooseNewOnFinished();
+                this->vidThreads[lastVidDrawn]->stop();
             }
             break;
         case Qt::Key_O:
@@ -892,9 +795,9 @@ void GLWidget::closeEvent(QCloseEvent* event)
 
         // Just in case, check now if any gst threads still exist, if not, close application now
         bool allFinished = true;
-        for(int i = 0; i < this->gstThreads.size(); i++)
+        for(int i = 0; i < this->vidThreads.size(); i++)
         {
-            if(this->gstThreads[i] != NULL)
+            if(this->vidThreads[i] != NULL)
             {
                 allFinished = false;
                 break;

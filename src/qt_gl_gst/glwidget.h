@@ -14,7 +14,7 @@
 
 #include <iostream>
 
-#include "gstthread.h"
+#include "vidthread.h"
 #include "pipeline.h"
 
 #include "model.h"
@@ -58,7 +58,8 @@ typedef enum
 typedef struct _VidTextureInfo
 {
     GLuint texId;
-    GstBuffer *buffer;
+    void *buffer;
+    //GstBuffer *buffer;
     bool texInfoValid;
     int width;
     int height;
@@ -146,7 +147,7 @@ private:
 
     int getCallingGstVecIx(int vidIx);
     QVector<QString> videoLoc;
-    QVector<GstThread*>gstThreads;
+    QVector<VidThread*>vidThreads;
     bool closing;
     QVector<VidTextureInfo> vidTextures;
 
