@@ -66,9 +66,21 @@ protected:
 };
 
 #if defined OMAP3530
- #include "gsttipipeline.h"
+
+ // Don't include derived classes if this include is from the base class
+ // header file due to the MOC. In that case, base class is not defined
+ // yet but inclusion guard is defined.
+ #ifndef GSTPIPELINE_H
+  #include "gstpipeline.h"
+  #ifndef TIGSTPIPELINE_H
+   #include "tigstpipeline.h"
+  #endif
+ #endif
+
 #elif defined UNIX
  #include "gstpipeline.h"
 #endif
 
 #endif // PIPELINE_H
+
+

@@ -13,7 +13,7 @@ VidThread::VidThread(int vidIx,
     m_chooseNew(false)
 {
 #if defined OMAP3530
-    m_pipeline = new GstTIPipeline(vidIx, m_videoLocation, this);
+    m_pipeline = new TIGStreamerPipeline(vidIx, m_videoLocation, this);
 #elif defined UNIX
     m_pipeline = new GStreamerPipeline(vidIx, m_videoLocation, this);
 #endif

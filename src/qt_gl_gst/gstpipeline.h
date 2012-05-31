@@ -11,7 +11,6 @@
 
 #define PIPELINE_BUFFER_VID_DATA_START    GST_BUFFER_DATA
 
-
 class GStreamerPipeline : public Pipeline //public QObject
 {
     Q_OBJECT
@@ -35,7 +34,7 @@ public:
     GstElement *m_audioconvert;
     GstElement *m_audioqueue;
 
-private:
+protected:
     GMainLoop* m_loop;
     GstBus* m_bus;
     GstElement* m_pipeline;

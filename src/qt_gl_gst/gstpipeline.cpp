@@ -1,5 +1,5 @@
 
-#include "pipeline.h"
+#include "gstpipeline.h"
 
 
 GStreamerPipeline::GStreamerPipeline(int vidIx,

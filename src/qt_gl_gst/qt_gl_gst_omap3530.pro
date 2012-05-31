@@ -16,14 +16,20 @@ DEFINES += UNIX OMAP3530 GLES2
 SOURCES += main.cpp \
     glwidget.cpp \
     pipeline.cpp \
-    gstthread.cpp \
+    gstpipeline.cpp \
+    tigstpipeline.cpp \
+    vidthread.cpp \
+    shaderlists.cpp \
     model.cpp
 
 HEADERS  += \
     glwidget.h \
     pipeline.h \
-    gstthread.h \
+    gstpipeline.h \
+    tigstpipeline.h \
+    vidthread.h \
     AsyncQueue.h \
+    shaderlists.h \
     model.h
 
 unix {
@@ -43,9 +49,3 @@ LIBS += -L/mnt/data/ti-dvsdk_omap3530-evm_4_01_00_09/omap35x_graphics_sdk_4.00.0
     -lOpenVG \
     -lsrv_um 
 
-#libffgen.a     libglslcompiler.so  libOpenVGU.so  libpvrPVR2D_FLIPWSEGL.so   libpvrPVR2D_X11WSEGL.so      libusc.a
-#libGLES_CM.so  libpvr2d.so    libpvrPVR2D_FRONTWSEGL.so  libPVRScopeServices.so       libuseasm.a
-# pvrPVR2D_BLITWSEGL.so   libpvrPVR2D_LINUXFBWSEGL.so libusp.a
-
-
-#LIBS += -L/mnt/data/ti-dvsdk_omap3530-evm_4_01_00_09/omap35x_graphics_sdk_4.00.00.01/gfx_rel_es3.x
