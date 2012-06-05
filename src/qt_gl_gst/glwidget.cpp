@@ -61,6 +61,12 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     }
 
     model = NULL;
+
+    frames = 0;
+    setAttribute(Qt::WA_PaintOnScreen);
+    setAttribute(Qt::WA_NoSystemBackground);
+    setAutoBufferSwap(false);
+    setAutoFillBackground(false);
 }
 
 GLWidget::~GLWidget()
@@ -82,13 +88,6 @@ void GLWidget::initializeGL()
     std::cout << "Window is" << ((this->format().doubleBuffer()) ? "": " not") << " double buffered\n";
 
     qglClearColor(QColor(Qt::black));
-
-    glDepthFunc(GL_LESS);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_TEXTURE_RECTANGLE_ARB);
-    glEnable (GL_BLEND);
-    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 
     setupShader(&brickProg, BrickGLESShaderList, NUM_SHADERS_BRICKGLES);
     // Set up initial uniform values
@@ -140,12 +139,16 @@ void GLWidget::initializeGL()
 
 }
 
-QVector2D vidTriStripVertices[4];
-QVector2D vidTriStripTexCoords[4];
-QVector2D vidTriStripAlphaTexCoords[4];
-
-void GLWidget::paintGL()
+void GLWidget::paintEvent(QPaintEvent *event)
 {
+    makeCurrent();
+
+    glDepthFunc(GL_LESS);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_RECTANGLE_ARB);
+    glEnable (GL_BLEND);
+    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     this->modelViewMatrix = QMatrix4x4();
@@ -249,18 +252,15 @@ void GLWidget::paintGL()
             // Need to set these arrays up here as shader instances are shared between
             // all the videos:
             vidShader->enableAttributeArray("a_texCoord");
-            //vidShader->setAttributeArray("a_texCoord", vidTriStripTexCoords);
             vidShader->setAttributeArray("a_texCoord", this->vidTextures[vidIx].triStripTexCoords);
 
             if(this->vidTextures[vidIx].effect == VidShaderAlphaMask)
             {
                 vidShader->enableAttributeArray("a_alphaTexCoord");
-                //vidShader->setAttributeArray("a_alphaTexCoord", vidTriStripAlphaTexCoords);
                 vidShader->setAttributeArray("a_alphaTexCoord", this->vidTextures[vidIx].triStripAlphaTexCoords);
             }
 
             vidShader->enableAttributeArray("a_vertex");
-            //vidShader->setAttributeArray("a_vertex", vidTriStripVertices);
             vidShader->setAttributeArray("a_vertex", this->vidTextures[vidIx].triStripVertices);
 
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -273,6 +273,25 @@ void GLWidget::paintGL()
             vidShader->disableAttributeArray("a_texCoord");
         }
     }
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::TextAntialiasing);
+
+    painter.endNativePainting();
+    QString framesPerSecond;
+    framesPerSecond.setNum(frames /(frameTime.elapsed() / 1000.0), 'f', 2);
+    painter.setPen(Qt::white);
+    painter.drawText(20, 40, framesPerSecond + " fps");
+    painter.end();
+    swapBuffers();
+
+    if (!(frames % 100))
+    {
+        frameTime.start();
+        frames = 0;
+    }
+    ++frames;
 }
 
 void GLWidget::resizeGL(int wid, int ht)
@@ -376,8 +395,7 @@ void GLWidget::newFrame(int vidIx)
 
         printOpenGLError(__FILE__, __LINE__);
 
-        /* direct call to paintGL (no queued) */
-        this->updateGL();
+        this->update();
     }
 }
 
@@ -389,13 +407,13 @@ void GLWidget::gstThreadFinished(int vidIx)
         this->vidThreads.replace(vidIx, NULL);
         this->vidTextures[vidIx].texInfoValid = false;
 
-        // check if any gst threads left, if not close
+        // Check if any gst threads left, if not close
         bool allFinished = true;
         for(int i = 0; i < this->vidThreads.size(); i++)
         {
             if(this->vidThreads[i] != NULL)
             {
-                // catch any threads which were already finished at quitting time
+                // Catch any threads which were already finished at quitting time
                 if(this->vidThreads[i]->isFinished())
                 {
                     delete(this->vidThreads[vidIx]);
@@ -501,7 +519,6 @@ void GLWidget::animate()
     }
 
     /* Colour swapping effect shader */
-
     if(ColourSwapDirUpwards)
     {
         if((ColourComponentSwapB.z() < 0.1) || (ColourComponentSwapG.z() > 0.9))
@@ -527,33 +544,7 @@ void GLWidget::animate()
         }
     }
 
-
-    /*
-    if(ColourSwapDirUpwards)
-    {
-        if((ColourComponentSwapR.z() > 0.9))
-        {
-            ColourSwapDirUpwards = false;
-        }
-        else
-        {
-            ColourComponentSwapR.setZ(ColourComponentSwapR.z() + 0.01);
-        }
-    }
-    else
-    {
-        if((ColourComponentSwapR.z() < 0.1))
-        {
-            ColourSwapDirUpwards = false;
-        }
-        else
-        {
-            ColourComponentSwapR.setZ(ColourComponentSwapR.z() - 0.01);
-        }
-    }
-    */
-
-    updateGL();
+    update();
 }
 
 void GLWidget::mousePressEvent(QMouseEvent *event)
@@ -607,7 +598,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event)
            {
                zRot = qNormalizeAngle(zRot + (8 * xLastIncr));
                fScale += (yLastIncr)*SCALE_FACTOR;
-               updateGL();
+               update();
            }
         }
         else
@@ -616,7 +607,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event)
            {
                xRot = qNormalizeAngle(xRot + (8 * yLastIncr));
                yRot = qNormalizeAngle(yRot + (8 * xLastIncr));
-               updateGL();
+               update();
            }
         }
     }
@@ -685,12 +676,12 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
                         // Ok, a new image is loaded
                         if(alphaTextureLoaded)
                         {
-                            // delete the old texture
+                            // Delete the old texture
                             alphaTextureLoaded = false;
                             deleteTexture(alphaTextureId);
                         }
 
-                        // bind new image to texture
+                        // Bind new image to texture
                         alphaTextureId = bindTexture(alphaTexImage.mirrored(true, true), GL_TEXTURE_RECTANGLE_ARB);
                         alphaTexWidth = alphaTexImage.width();
                         alphaTexHeight = alphaTexImage.height();
@@ -855,11 +846,6 @@ void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
     {
     case VidShaderNoEffect:
     case VidShaderNoEffectNormalisedTexCoords:
-        /*
-        this->vidTextures[vidIx].shader->setUniformValue("vidTexture", 0); // texture unit index
-        this->vidTextures[vidIx].shader->setUniformValue("yHeight", (GLfloat)this->vidTextures[vidIx].height);
-        this->vidTextures[vidIx].shader->setUniformValue("yWidth", (GLfloat)this->vidTextures[vidIx].width);
-        */
         this->vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
         this->vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->vidTextures[vidIx].height);
         this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
@@ -1034,8 +1020,6 @@ int GLWidget::setupShader(QGLShaderProgram *prog, GLShaderModule shaderList[], i
     {
         return -1;
     }
-
-
 
     return 0;
 }

@@ -11,6 +11,8 @@
 #include <QStringList>
 #include <QFileDialog>
 #include <QSignalMapper>
+#include <QTime>
+#include <QPaintEvent>
 
 #include <iostream>
 
@@ -59,7 +61,6 @@ typedef struct _VidTextureInfo
 {
     GLuint texId;
     void *buffer;
-    //GstBuffer *buffer;
     bool texInfoValid;
     int width;
     int height;
@@ -94,7 +95,7 @@ public:
 
 protected:
     void initializeGL();
-    void paintGL();
+    void paintEvent(QPaintEvent *event);
     void resizeGL(int width, int height);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
@@ -172,6 +173,10 @@ private:
     GLuint alphaTexHeight;
 
     Model *model;
+
+    // FPS counter
+    int frames;
+    QTime frameTime;
 
 signals:
     void xRotationChanged(int angle);
