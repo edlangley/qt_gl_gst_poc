@@ -160,6 +160,13 @@ private:
     QGLShaderProgram I420ColourHilightSwap;
     QGLShaderProgram I420AlphaMask;
 
+    QGLShaderProgram UYVYNoEffectNormalised;
+    QGLShaderProgram UYVYLitNormalised;
+    QGLShaderProgram UYVYNoEffect;
+    QGLShaderProgram UYVYColourHilight;
+    QGLShaderProgram UYVYColourHilightSwap;
+    QGLShaderProgram UYVYAlphaMask;
+
     // Video shader effects vars - for simplicitys sake make them general to all vids
     QVector4D ColourHilightRangeMin;
     QVector4D ColourHilightRangeMax;

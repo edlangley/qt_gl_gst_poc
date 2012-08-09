@@ -8,7 +8,7 @@ uniform highp mat4 u_mv_matrix;
 attribute highp vec4 a_vertex;
 attribute highp vec4 a_texCoord;
 
-varying highp vec4 v_texCoord;
+varying mediump vec4 v_texCoord;
 
 void main(void)
 {

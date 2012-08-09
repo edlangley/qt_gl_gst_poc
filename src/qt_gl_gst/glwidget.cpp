@@ -1,10 +1,14 @@
+#include <QMainWindow>
 #include "glwidget.h"
 #include "shaderlists.h"
 
-#ifdef GLES2
+//#ifdef GLES2
+#ifndef RECTTEX
  #define GL_TEXTURE_RECTANGLE_ARB            GL_TEXTURE_2D
  #define GL_TEXTURE0_ARB                     GL_TEXTURE0
  #define GL_TEXTURE1_ARB                     GL_TEXTURE1
+#else
+ #include "GL/glu.h"
 #endif
 
 
@@ -76,16 +80,29 @@ GLWidget::~GLWidget()
 void GLWidget::initializeGL()
 {
     QString verStr((const char*)glGetString(GL_VERSION));
-    QStringList verNums = verStr.split(".");
-    std::cout << "GL_VERSION major=" << verNums[0].toStdString() << " minor=" << verNums[1].toStdString() << "\n";
+    qDebug("GL_VERSION: %s", verStr.toAscii().constData());
 
-    if(verNums[0].toInt() < 2)
+    QStringList verNums = verStr.split(QRegExp("[ .]"));
+    bool foundVerNum = false;
+    for(int verNumIx = 0; verNumIx < verNums.length(); verNumIx++)
     {
-        qCritical("Support for OpenGL 2.0 is required for this demo...exiting\n");
-        close();
+        int verNum = verNums[verNumIx].toInt(&foundVerNum);
+        if(foundVerNum)
+        {
+            if(verNum < 2)
+            {
+                qCritical("Support for OpenGL 2.0 is required for this demo...exiting\n");
+                close();
+            }
+            break;
+        }
+    }
+    if(!foundVerNum)
+    {
+        qCritical("Couldn't find OpenGL version number\n");
     }
 
-    std::cout << "Window is" << ((this->format().doubleBuffer()) ? "": " not") << " double buffered\n";
+    qDebug("Window is%s double buffered", ((this->format().doubleBuffer()) ? "": " not"));
 
     qglClearColor(QColor(Qt::black));
 
@@ -101,12 +118,19 @@ void GLWidget::initializeGL()
     brickProg.release();
     printOpenGLError(__FILE__, __LINE__);
 
-    setupShader(&I420NoEffectNormalised, VidI420NoEffectNormalisedShaderList, NUM_SHADERS_VIDI420NOEFFECT_NORMALISED);
-    setupShader(&I420LitNormalised, VidI420LitNormalisedShaderList, NUM_SHADERS_VIDI420LIT_NORMALISED);
-    setupShader(&I420NoEffect, VidI420NoEffectShaderList, NUM_SHADERS_VIDI420NOEFFECT);
-    setupShader(&I420ColourHilight, VidI420ColourHilightShaderList, NUM_SHADERS_VIDI420COLOURHILIGHT);
-    setupShader(&I420ColourHilightSwap, VidI420ColourHilightSwapShaderList, NUM_SHADERS_VIDI420COLOURHILIGHTSWAP);
-    setupShader(&I420AlphaMask, VidI420AlphaMaskShaderList, NUM_SHADERS_VIDI420ALPHAMASK);
+    setupShader(&I420NoEffectNormalised, VidI420NoEffectNormalisedShaderList, NUM_SHADERS_VIDI420_NOEFFECT_NORMALISED);
+    setupShader(&I420LitNormalised, VidI420LitNormalisedShaderList, NUM_SHADERS_VIDI420_LIT_NORMALISED);
+    setupShader(&I420NoEffect, VidI420NoEffectShaderList, NUM_SHADERS_VIDI420_NOEFFECT);
+    setupShader(&I420ColourHilight, VidI420ColourHilightShaderList, NUM_SHADERS_VIDI420_COLOURHILIGHT);
+    setupShader(&I420ColourHilightSwap, VidI420ColourHilightSwapShaderList, NUM_SHADERS_VIDI420_COLOURHILIGHTSWAP);
+    setupShader(&I420AlphaMask, VidI420AlphaMaskShaderList, NUM_SHADERS_VIDI420_ALPHAMASK);
+
+    setupShader(&UYVYNoEffectNormalised, VidUYVYNoEffectNormalisedShaderList, NUM_SHADERS_VIDUYVY_NOEFFECT_NORMALISED);
+    setupShader(&UYVYLitNormalised, VidUYVYLitNormalisedShaderList, NUM_SHADERS_VIDUYVY_LIT_NORMALISED);
+    setupShader(&UYVYNoEffect, VidUYVYNoEffectShaderList, NUM_SHADERS_VIDUYVY_NOEFFECT);
+    setupShader(&UYVYColourHilight, VidUYVYColourHilightShaderList, NUM_SHADERS_VIDUYVY_COLOURHILIGHT);
+    setupShader(&UYVYColourHilightSwap, VidUYVYColourHilightSwapShaderList, NUM_SHADERS_VIDUYVY_COLOURHILIGHTSWAP);
+    setupShader(&UYVYAlphaMask, VidUYVYAlphaMaskShaderList, NUM_SHADERS_VIDUYVY_ALPHAMASK);
 
     // Set uniforms for vid shaders along with other stream details when first
     // frame comes through
@@ -142,14 +166,26 @@ void GLWidget::initializeGL()
 void GLWidget::paintEvent(QPaintEvent *event)
 {
     makeCurrent();
+    // Temp:
+    printOpenGLError(__FILE__, __LINE__);
 
     glDepthFunc(GL_LESS);
+    // Temp:
+    printOpenGLError(__FILE__, __LINE__);
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_TEXTURE_RECTANGLE_ARB);
+    // Temp:
+    printOpenGLError(__FILE__, __LINE__);
+//    glEnable(GL_TEXTURE_RECTANGLE_ARB);
+    // Temp:
+    printOpenGLError(__FILE__, __LINE__);
     glEnable (GL_BLEND);
+    // Temp:
+    printOpenGLError(__FILE__, __LINE__);
     glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // Temp:
+    printOpenGLError(__FILE__, __LINE__);
 
     this->modelViewMatrix = QMatrix4x4();
     this->modelViewMatrix.lookAt(QVector3D(0.0, 0.0, -5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
@@ -198,6 +234,8 @@ void GLWidget::paintEvent(QPaintEvent *event)
         break;
     }
 
+    // Temp:
+    printOpenGLError(__FILE__, __LINE__);
 
     // Draw videos around the object
     for(int vidIx = 0; vidIx < this->vidTextures.size(); vidIx++)
@@ -228,8 +266,8 @@ void GLWidget::paintEvent(QPaintEvent *event)
                 this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapB", ColourComponentSwapB);
             }
 
-            GLfloat vidWidth = this->vidTextures[vidIx].width;
-            GLfloat vidHeight = this->vidTextures[vidIx].height;
+            //GLfloat vidWidth = this->vidTextures[vidIx].width;
+            //GLfloat vidHeight = this->vidTextures[vidIx].height;
             QGLShaderProgram *vidShader = this->vidTextures[vidIx].shader;
 
             QMatrix4x4 vidQuadMatrix = this->modelViewMatrix;
@@ -325,6 +363,8 @@ void GLWidget::newFrame(int vidIx)
         // Load the gst buf into a texture
         if(this->vidTextures[vidIx].texInfoValid == false)
         {
+            qDebug("GLWidget: Received first frame of pipeline %d", vidIx);
+
             // Try and keep this fairly portable to other media frameworks by
             // leaving info extraction within pipeline class
             this->vidTextures[vidIx].width = pipeline->getWidth();
@@ -355,26 +395,6 @@ void GLWidget::newFrame(int vidIx)
 
             this->vidTextures[vidIx].triStripTexCoords[3]      = QVector2D(0.0f, vidHeight);
             this->vidTextures[vidIx].triStripVertices[3]       = QVector2D(VIDTEXTURE_RIGHT_X, VIDTEXTURE_BOT_Y);
-
-
-
-
-/*
-            float xVertexStart = qMin(VIDTEXTURE_RIGHT_X, VIDTEXTURE_LEFT_X);
-            float yVertexStart = qMin(VIDTEXTURE_TOP_Y, VIDTEXTURE_BOT_Y);
-            float xVertexIncrement = (qMax(VIDTEXTURE_RIGHT_X, VIDTEXTURE_LEFT_X) - qMin(VIDTEXTURE_RIGHT_X, VIDTEXTURE_LEFT_X)) / NUM_VIDTEXTURE_VERTICES_X;
-            float yVertexIncrement = (qMax(VIDTEXTURE_TOP_Y, VIDTEXTURE_BOT_Y) - qMin(VIDTEXTURE_TOP_Y, VIDTEXTURE_BOT_Y)) / NUM_VIDTEXTURE_VERTICES_Y;
-
-
-            for(int y = 0; y < NUM_VIDTEXTURE_VERTICES_Y; y++)
-            {
-                for(int x = 0; x < NUM_VIDTEXTURE_VERTICES_X; x++)
-                {
-
-
-                }
-            }
-*/
         }
 
 
@@ -385,14 +405,28 @@ void GLWidget::newFrame(int vidIx)
         glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-        // TODO: move gst macro into pipeline class, have queue contain just pointer
-        // to actual frame data
-        glTexImage2D  (GL_TEXTURE_RECTANGLE_ARB, 0, GL_LUMINANCE,
-                       this->vidTextures[vidIx].width,
-                       1.5f*this->vidTextures[vidIx].height,
-                       0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                       PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer));
-
+        // TODO: Put switch around this and alter width and height arguments based on video
+        // format:
+        switch(this->vidTextures[vidIx].colourFormat)
+        {
+        case ColFmt_I420:
+            glTexImage2D  (GL_TEXTURE_RECTANGLE_ARB, 0, GL_LUMINANCE,
+                           this->vidTextures[vidIx].width,
+                           1.5f*this->vidTextures[vidIx].height,
+                           0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
+                           PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer));
+            break;
+        case ColFmt_UYVY:
+            glTexImage2D  (GL_TEXTURE_RECTANGLE_ARB, 0, GL_LUMINANCE,
+                           this->vidTextures[vidIx].width*2,
+                           this->vidTextures[vidIx].height,
+                           0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
+                           PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer));
+            break;
+        default:
+            qCritical("Decide how to load texture for colour format %d", this->vidTextures[vidIx].colourFormat);
+            break;
+        }
         printOpenGLError(__FILE__, __LINE__);
 
         this->update();
@@ -800,6 +834,14 @@ void GLWidget::closeEvent(QCloseEvent* event)
         }
         event->ignore();
     }
+    else
+    {
+        // This is where we're all finished and really are closing now.
+        // At the mo, tell parent to close too.
+        QWidget* _parent = dynamic_cast<QWidget*>(parent());
+        if(_parent)
+            _parent->close();
+    }
 }
 
 // Shader management
@@ -830,9 +872,32 @@ void GLWidget::setAppropriateVidShader(int vidIx)
             break;
         }
         break;
+    case ColFmt_UYVY:
+        switch(this->vidTextures[vidIx].effect)
+        {
+        case VidShaderNoEffect:
+            this->vidTextures[vidIx].shader = &UYVYNoEffect;
+            break;
+        case VidShaderNoEffectNormalisedTexCoords:
+            this->vidTextures[vidIx].shader = &UYVYNoEffectNormalised;
+            break;
+        case VidShaderLitNormalisedTexCoords:
+            this->vidTextures[vidIx].shader = &UYVYLitNormalised;
+            break;
+        case VidShaderColourHilight:
+            this->vidTextures[vidIx].shader = &UYVYColourHilight;
+            break;
+        case VidShaderColourHilightSwap:
+            this->vidTextures[vidIx].shader = &UYVYColourHilightSwap;
+            break;
+        case VidShaderAlphaMask:
+            this->vidTextures[vidIx].shader = &UYVYAlphaMask;
+            break;
+        }
+        break;
 
     default:
-        qDebug ("Haven't implemented a shader for colour format %d yet", this->vidTextures[vidIx].colourFormat);
+        qCritical ("Haven't implemented a shader for colour format %d yet", this->vidTextures[vidIx].colourFormat);
         break;
     }
 }
@@ -841,6 +906,7 @@ void GLWidget::setAppropriateVidShader(int vidIx)
 // or else!
 void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
 {
+    // TODO: move common vars out of switch
 
     switch(this->vidTextures[vidIx].effect)
     {
@@ -923,103 +989,100 @@ int GLWidget::loadShaderFile(QString fileName, QString &shaderSource)
     return 0;
 }
 
-int GLWidget::setupShader(QGLShaderProgram *prog, QString baseFileName, bool vertNeeded, bool fragNeeded)
-{
-    bool ret;
-
-    if(vertNeeded)
-    {
-        QString vertexShaderSource;
-        ret = loadShaderFile(baseFileName+".vert", vertexShaderSource);
-        if(ret != 0)
-        {
-            return ret;
-        }
-
-        ret = prog->addShaderFromSourceCode(QGLShader::Vertex,
-                                              vertexShaderSource);
-        printOpenGLError(__FILE__, __LINE__);
-        if(ret == false)
-        {
-            qCritical() << "vertex shader log: " << prog->log();
-            return -1;
-        }
-    }
-
-    if(fragNeeded)
-    {
-        QString fragmentShaderSource;
-        ret = loadShaderFile(baseFileName+".frag", fragmentShaderSource);
-        if(ret != 0)
-        {
-            return ret;
-        }
-
-        ret = prog->addShaderFromSourceCode(QGLShader::Fragment,
-                                              fragmentShaderSource);
-        printOpenGLError(__FILE__, __LINE__);
-        if(ret == false)
-        {
-            qCritical() << "fragment shader log: " << prog->log();
-            return -1;
-        }
-    }
-
-    ret = prog->link();
-    printOpenGLError(__FILE__, __LINE__);
-    if(ret == false)
-    {
-        qCritical() << "shader program link log: " << prog->log();
-        return -1;
-    }
-
-    ret = prog->bind();
-    printOpenGLError(__FILE__, __LINE__);
-    if(ret == false)
-    {
-        return -1;
-    }
-
-    return 0;
-}
-
 int GLWidget::setupShader(QGLShaderProgram *prog, GLShaderModule shaderList[], int listLen)
 {
     bool ret;
 
+    qDebug ("Setting up a shader:");
+
+    QString shaderSource;
     for(int listIx = 0; listIx < listLen; listIx++)
     {
-        QString shaderSource;
-        ret = loadShaderFile(shaderList[listIx].sourceFileName, shaderSource);
-        if(ret != 0)
+        if(shaderList[listIx].type == QGLShader::Vertex)
         {
-            return ret;
-        }
+            QString nextShaderSource;
 
-        ret = prog->addShaderFromSourceCode(shaderList[listIx].type,
-                                              shaderSource);
-        printOpenGLError(__FILE__, __LINE__);
-        if(ret == false)
-        {
-            qCritical() << "vertex shader log: " << prog->log();
-            return -1;
+            qDebug ("concatenating %s", shaderList[listIx].sourceFileName);
+
+            ret = loadShaderFile(shaderList[listIx].sourceFileName, nextShaderSource);
+            if(ret != 0)
+            {
+                return ret;
+            }
+
+            shaderSource += nextShaderSource;
         }
     }
 
+    if(!shaderSource.isEmpty())
+    {
+        qDebug ("compiling vertex shader");
+
+        ret = prog->addShaderFromSourceCode(QGLShader::Vertex, shaderSource);
+#if 0
+        if(ret == false)
+        {
+            qCritical() << "Compile log for shader " << shaderList[listIx].sourceFileName
+                        << ":\n" << prog->log();
+            return -1;
+        }
+#endif
+    }
+
+    shaderSource.clear();
+
+    for(int listIx = 0; listIx < listLen; listIx++)
+    {
+        if(shaderList[listIx].type == QGLShader::Fragment)
+        {
+            QString nextShaderSource;
+
+            qDebug ("concatenating %s", shaderList[listIx].sourceFileName);
+
+            ret = loadShaderFile(shaderList[listIx].sourceFileName, nextShaderSource);
+            if(ret != 0)
+            {
+                return ret;
+            }
+
+            shaderSource += nextShaderSource;
+        }
+    }
+
+    if(!shaderSource.isEmpty())
+    {
+        qDebug ("compiling fragment shader");
+
+        ret = prog->addShaderFromSourceCode(QGLShader::Fragment, shaderSource);
+#if 0
+        if(ret == false)
+        {
+            qCritical() << "Compile log for shader " << shaderList[listIx].sourceFileName
+                        << ":\n" << prog->log();
+            return -1;
+        }
+#endif
+    }
+
     ret = prog->link();
-    printOpenGLError(__FILE__, __LINE__);
     if(ret == false)
     {
-        qCritical() << "shader program link log: " << prog->log();
+        qCritical() << "Link log for shaders ";
+        for(int listIx = 0; listIx < listLen; listIx++)
+        {
+            qCritical() << shaderList[listIx].sourceFileName << " ";
+        }
+        qCritical() << "\n" << prog->log();
         return -1;
     }
 
     ret = prog->bind();
-    printOpenGLError(__FILE__, __LINE__);
     if(ret == false)
     {
         return -1;
-    }
+    } 
+
+    printOpenGLError(__FILE__, __LINE__);
 
     return 0;
 }
@@ -1036,10 +1099,10 @@ int GLWidget::printOpenGLError(const char *file, int line)
     glErr = glGetError();
     while (glErr != GL_NO_ERROR)
     {
-#ifdef GLES2
-        qCritical() << "glError in file " << file << " @ line " << line << ": " << glErr;
-#else
+#ifdef RECTTEX
         qCritical() << "glError in file " << file << " @ line " << line << ": " << (const char *)gluErrorString(glErr);
+#else
+        qCritical() << "glError in file " << file << " @ line " << line << ": " << glErr;
 #endif
         retCode = 1;
         glErr = glGetError();

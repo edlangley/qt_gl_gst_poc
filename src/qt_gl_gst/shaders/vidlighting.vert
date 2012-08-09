@@ -1,7 +1,7 @@
 uniform vec3 u_lightPosition;
 
-const float mediump SpecularContribution = 0.3;
-const float mediump DiffuseContribution  = 1.0 - SpecularContribution;
+const mediump float SpecularContribution = 0.3;
+const mediump float DiffuseContribution  = 1.0 - SpecularContribution;
 
 
 
@@ -17,16 +17,16 @@ varying highp vec4 v_texCoord;
 
 void main(void)
 {
-    vec3 ecPosition = vec3 (u_mv_matrix * a_vertex);
+    highp vec3 ecPosition = vec3 (u_mv_matrix * a_vertex);
 
-    vec3 tnorm      = normalize(u_mv_matrix * vec4(a_normal, 0.0));
+    highp vec3 tnorm      = normalize(u_mv_matrix * vec4(a_normal, 0.0)).xyz;
 
-    vec3 lightVec   = normalize(u_lightPosition - ecPosition);
-    vec3 reflectVec = (2.0 * tnorm * dot(lightVec, tnorm)) - lightVec;
+    highp vec3 lightVec   = normalize(u_lightPosition - ecPosition);
+    highp vec3 reflectVec = (2.0 * tnorm * dot(lightVec, tnorm)) - lightVec;
 
-    vec3 viewVec    = normalize(-ecPosition);
-    float diffuse   = max(dot(lightVec, tnorm), 0.0);
-    float spec      = 0.0;
+    highp vec3 viewVec    = normalize(-ecPosition);
+    highp float diffuse   = max(dot(lightVec, tnorm), 0.0);
+    highp float spec      = 0.0;
 
     if (diffuse > 0.0)
     {

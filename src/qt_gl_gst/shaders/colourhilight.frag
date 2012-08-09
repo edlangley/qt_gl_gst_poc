@@ -3,16 +3,15 @@
 // This shader must be linked with another containing yuv2rgb function
 // to handle the video data first
 
-#extension GL_ARB_texture_rectangle : enable
 
-uniform vec4 u_colrToDisplayMin, u_colrToDisplayMax;
+uniform mediump vec4 u_colrToDisplayMin, u_colrToDisplayMax;
 
-vec4 yuv2rgb(void);
+mediump vec4 yuv2rgb(void);
 
 void main(void)
 {
-	vec4 rgbColour = yuv2rgb();
-	float monoComponent;
+	mediump vec4 rgbColour = yuv2rgb();
+	mediump float monoComponent;
 
 	if((rgbColour.r > u_colrToDisplayMin.r) && (rgbColour.r < u_colrToDisplayMax.r) &&
 	   (rgbColour.r > u_colrToDisplayMin.g) && (rgbColour.r < u_colrToDisplayMax.g) &&

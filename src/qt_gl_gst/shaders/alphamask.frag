@@ -3,21 +3,20 @@
 // This shader must be linked with another containing the yuv2rgb function
 // to handle the video data first
 
-#extension GL_ARB_texture_rectangle : enable
 
-uniform highp sampler2DRect u_alphaTexture;
+uniform highp sampler2D u_alphaTexture;
 
 varying highp vec3 v_alphaTexCoord;
 
-vec4 yuv2rgb(void);
+mediump vec4 yuv2rgb(void);
 
 void main(void)
 {
-	vec4 alphaColour;
-	float alphaAverage;
-	vec4 rgbColour = yuv2rgb();
+	highp vec4 alphaColour;
+	highp float alphaAverage;
+	mediump vec4 rgbColour = yuv2rgb();
 
-	alphaColour = texture2DRect(u_alphaTexture, v_alphaTexCoord.xy);
+	alphaColour = texture2D(u_alphaTexture, v_alphaTexCoord.xy);
 	alphaAverage = alphaColour.r + alphaColour.g + alphaColour.b;
 	alphaAverage /= 3.0;
 

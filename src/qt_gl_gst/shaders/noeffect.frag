@@ -2,9 +2,9 @@
 // This shader must be linked with another containing yuv2rgb function
 // to handle the video data first
 
-#extension GL_ARB_texture_rectangle : enable
+//#extension GL_ARB_texture_rectangle : enable
 
-vec4 yuv2rgb(void);
+mediump vec4 yuv2rgb(void);
 
 void main(void)
 {

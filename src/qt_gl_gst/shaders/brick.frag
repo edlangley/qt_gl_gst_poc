@@ -9,17 +9,17 @@
 // See 3Dlabs-License.txt for license information
 //  
 
-uniform vec3  BrickColor, MortarColor;
-uniform vec3  BrickSize;
-uniform vec3  BrickPct;
+uniform highp vec3 BrickColor, MortarColor;
+uniform highp vec3 BrickSize;
+uniform highp vec3 BrickPct;
 
-varying vec3  v_MCposition;
-varying float v_LightIntensity;
+varying mediump vec3  v_MCposition;
+varying highp float v_LightIntensity;
 
 void main(void)
 {
-    vec3  color;
-    vec3  position, useBrick;
+    highp vec3 color;
+    mediump vec3 position, useBrick;
     
     position = v_MCposition / BrickSize;
 

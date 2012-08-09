@@ -13,8 +13,8 @@
 
 uniform vec3 LightPosition;
 
-const float mediump SpecularContribution = 0.3;
-const float mediump DiffuseContribution  = 1.0 - SpecularContribution;
+const mediump float SpecularContribution = 0.3;
+const mediump float DiffuseContribution  = 1.0 - SpecularContribution;
 
 uniform highp mat4 u_mvp_matrix;
 uniform highp mat4 u_mv_matrix;
@@ -29,22 +29,22 @@ varying mediump vec3  v_MCposition;
 void main(void)
 {
 //    vec3 ecPosition = vec3 (gl_ModelViewMatrix * vertex);
-    vec3 ecPosition = vec3 (u_mv_matrix * a_vertex);
+    highp vec3 ecPosition = vec3 (u_mv_matrix * a_vertex);
 
 //    vec3 tnorm      = normalize(gl_NormalMatrix * normal);
-    vec3 tnorm      = normalize(u_mv_matrix * vec4(a_normal, 0.0));
+    highp vec3 tnorm      = normalize(u_mv_matrix * vec4(a_normal, 0.0)).xyz;
 
-    vec3 lightVec   = normalize(LightPosition - ecPosition);
+    highp vec3 lightVec   = normalize(LightPosition - ecPosition);
     // Using the reflection vector:
 //    vec3 reflectVec = reflect(-lightVec, tnorm);
-    vec3 reflectVec = (2.0 * tnorm * dot(lightVec, tnorm)) - lightVec;
+    highp vec3 reflectVec = (2.0 * tnorm * dot(lightVec, tnorm)) - lightVec;
 
     // Using the half vector:
     //vec3 halfVec    = normalize(-ecPosition - LightPosition);
 
-    vec3 viewVec    = normalize(-ecPosition);
-    float diffuse   = max(dot(lightVec, tnorm), 0.0);
-    float spec      = 0.0;
+    highp vec3 viewVec    = normalize(-ecPosition);
+    highp float diffuse   = max(dot(lightVec, tnorm), 0.0);
+    highp float spec      = 0.0;
 
     if (diffuse > 0.0)
     {

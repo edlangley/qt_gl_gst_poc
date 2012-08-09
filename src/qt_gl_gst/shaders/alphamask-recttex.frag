@@ -5,9 +5,9 @@
 
 #extension GL_ARB_texture_rectangle : enable
 
-uniform highp sampler2DRect u_alphaTexture;
+uniform sampler2DRect u_alphaTexture;
 
-varying highp vec3 v_alphaTexCoord;
+varying vec3 v_alphaTexCoord;
 
 vec4 yuv2rgb(void);
 
