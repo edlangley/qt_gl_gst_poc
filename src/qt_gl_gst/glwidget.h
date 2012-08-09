@@ -1,6 +1,8 @@
 #ifndef GLWIDGET_H
 #define GLWIDGET_H
 
+#define ENABLE_YUV_WINDOW       1
+
 #include <QApplication>
 #include <QGLWidget>
 #include <QGLShaderProgram>
@@ -20,6 +22,10 @@
 #include "pipeline.h"
 
 #include "model.h"
+
+#ifdef ENABLE_YUV_WINDOW
+#include "yuvdebugwindow.h"
+#endif
 
 #define INERTIA_THRESHOLD       1.0f
 #define INERTIA_FACTOR          0.5f
@@ -184,6 +190,11 @@ private:
     // FPS counter
     int frames;
     QTime frameTime;
+
+#ifdef ENABLE_YUV_WINDOW
+    YuvDebugWindow *yuvWindow;
+    QVector<QRgb> colourMap;
+#endif
 
 signals:
     void xRotationChanged(int angle);

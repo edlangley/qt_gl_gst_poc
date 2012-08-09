@@ -71,6 +71,15 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     setAttribute(Qt::WA_NoSystemBackground);
     setAutoBufferSwap(false);
     setAutoFillBackground(false);
+
+#ifdef ENABLE_YUV_WINDOW
+    yuvWindow = new YuvDebugWindow(this);
+    /* Build a colour map */
+    for(int i = 0; i < 256; i++)
+    {
+        colourMap.push_back(qRgb(i, i, i));
+    }
+#endif
 }
 
 GLWidget::~GLWidget()
@@ -415,6 +424,18 @@ void GLWidget::newFrame(int vidIx)
                            1.5f*this->vidTextures[vidIx].height,
                            0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
                            PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer));
+
+#ifdef ENABLE_YUV_WINDOW
+        if((vidIx == 0) && (yuvWindow->isVisible()))
+        {
+            QImage yuvImage(PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer),
+                            this->vidTextures[vidIx].width,
+                            1.5f*this->vidTextures[vidIx].height,
+                            QImage::Format_Indexed8);
+            yuvImage.setColorTable(colourMap);
+            yuvWindow->imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
+        }
+#endif
             break;
         case ColFmt_UYVY:
             glTexImage2D  (GL_TEXTURE_RECTANGLE_ARB, 0, GL_LUMINANCE,
@@ -422,6 +443,18 @@ void GLWidget::newFrame(int vidIx)
                            this->vidTextures[vidIx].height,
                            0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
                            PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer));
+
+#ifdef ENABLE_YUV_WINDOW
+        if((vidIx == 0) && (yuvWindow->isVisible()))
+        {
+            QImage yuvImage(PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer),
+                            this->vidTextures[vidIx].width*2,
+                            this->vidTextures[vidIx].height,
+                            QImage::Format_Indexed8);
+            yuvImage.setColorTable(colourMap);
+            yuvWindow->imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
+        }
+#endif
             break;
         default:
             qCritical("Decide how to load texture for colour format %d", this->vidTextures[vidIx].colourFormat);
@@ -669,6 +702,9 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
                           "<space> or <click>        - stop rotation\n"
                           "<+>, <-> or <ctrl + drag> - zoom model\n"
                           "<arrow keys> or <drag>    - rotate model\n"
+#ifdef ENABLE_YUV_WINDOW
+                          "y - View yuv data of vid 0 in modeless window"
+#endif
                           "\n";
             break;
         case Qt::Key_Escape:
@@ -804,6 +840,13 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
         case Qt::Key_Down:
            xRot += 8;
         break;
+
+#ifdef ENABLE_YUV_WINDOW
+        case Qt::Key_Y:
+            //yuvWindow = new YuvDebugWindow(this);
+            yuvWindow->show();
+        break;
+#endif
 
         default:
             QGLWidget::keyPressEvent(e);

@@ -21,7 +21,8 @@ SOURCES += main.cpp \
     pipeline.cpp \
     shaderlists.cpp \
     tigstpipeline.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    yuvdebugwindow.cpp
 
 HEADERS  += \
     glwidget.h \
@@ -32,7 +33,8 @@ HEADERS  += \
     pipeline.h \
     shaderlists.h \
     tigstpipeline.h \
-    mainwindow.h
+    mainwindow.h \
+    yuvdebugwindow.h
 
 LIBS += -lgstreamer-0.10 \
     -lgstinterfaces-0.10 \
