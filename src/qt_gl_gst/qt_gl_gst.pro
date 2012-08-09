@@ -11,7 +11,7 @@ CONFIG   += console
 TARGET = qt_gl_gst
 TEMPLATE = app
 
-DEFINES += UNIX
+DEFINES += UNIX RECTTEX
 
 SOURCES += main.cpp \
     glwidget.cpp \
@@ -20,7 +20,8 @@ SOURCES += main.cpp \
     vidthread.cpp \
     pipeline.cpp \
     shaderlists.cpp \
-    tigstpipeline.cpp
+    tigstpipeline.cpp \
+    mainwindow.cpp
 
 HEADERS  += \
     glwidget.h \
@@ -30,7 +31,8 @@ HEADERS  += \
     vidthread.h \
     pipeline.h \
     shaderlists.h \
-    tigstpipeline.h
+    tigstpipeline.h \
+    mainwindow.h
 
 LIBS += -lgstreamer-0.10 \
     -lgstinterfaces-0.10 \
@@ -50,4 +52,4 @@ INCLUDEPATH += /usr/include/gstreamer-0.10 \
 
 # Model loading using Assimp:
 LIBS += -L. -lassimp
-INCLUDEPATH += /home/elangley/3d_existing_code/assimp--2.0.863-sdk/include/
+INCLUDEPATH += /mnt/data/not_backedup/3d_existing_code/assimp--2.0.863-sdk/include/
