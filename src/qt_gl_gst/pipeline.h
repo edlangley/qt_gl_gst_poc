@@ -43,6 +43,7 @@ public:
     virtual void unconfigure() = 0;
     void notifyNewFrame() {emit newFrameReady(m_vidIx);}
 
+    int getVidIx() { return m_vidIx; }
     int getWidth() { return m_width; }
     int getHeight() { return m_height; }
     ColFormat getColourFormat() { return m_colFormat; }

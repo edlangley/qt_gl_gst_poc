@@ -40,7 +40,7 @@ void TIGStreamerPipeline::configure()
     this->m_audioqueue = gst_element_factory_make ("queue", "audioqueue");
     this->m_videoqueue = gst_element_factory_make ("queue", "videoqueue");
     this->m_videosink = gst_element_factory_make ("fakesink", "videosink");
-    this->m_audiosink = gst_element_factory_make ("alsasink", "audiosink");
+    //this->m_audiosink = gst_element_factory_make ("alsasink", "audiosink");
 
     g_object_set(G_OBJECT(this->m_audioqueue),
                  "max-size-buffers", 8000,
@@ -52,13 +52,14 @@ void TIGStreamerPipeline::configure()
     if (this->m_pipeline == NULL || this->m_source == NULL || this->m_qtdemux == NULL ||
         this->m_tividdecode == NULL || this->m_tiaudiodecode == NULL ||
         this->m_audioqueue == NULL || this->m_videoqueue == NULL ||
-        this->m_videosink == NULL || this->m_audiosink == NULL)
+        this->m_videosink == NULL)// || this->m_audiosink == NULL)
         g_critical ("One of the GStreamer decoding elements is missing");
 
     /* Setup the pipeline */
     gst_bin_add_many (GST_BIN(this->m_pipeline), this->m_source, this->m_qtdemux, this->m_tividdecode,
                       this->m_tiaudiodecode, this->m_audioqueue, this->m_videoqueue, this->m_videosink,
-                      this->m_audiosink, NULL);
+                      //this->m_audiosink,
+                      NULL);
 
     // Like all Gstreamer elements qtdemux inherits from gstelement which provides the
     // pad-added signal:
@@ -67,10 +68,22 @@ void TIGStreamerPipeline::configure()
     /* Link the elements */
     gst_element_link (this->m_source, this->m_qtdemux);
     gst_element_link (this->m_audioqueue, this->m_tiaudiodecode);
-    gst_element_link (this->m_tiaudiodecode, this->m_audiosink);
+    //gst_element_link (this->m_tiaudiodecode, this->m_audiosink);
     gst_element_link (this->m_videoqueue, this->m_tividdecode);
+#if 0
+    /* Use caps filter to get I420 from video decoder */
+    GstCaps *caps;
+    caps = gst_caps_new_simple ("video/x-raw-yuv",
+            "format", GST_TYPE_FOURCC, GST_MAKE_FOURCC ('I', '4', '2', '0'),
+            NULL);
+    if(!gst_element_link_filtered (this->m_tividdecode, this->m_videosink, caps))
+    {
+        qCritical("Failed to link viddecode and videosink");
+    }
+    gst_caps_unref (caps);
+#else
     gst_element_link (this->m_tividdecode, this->m_videosink);
-
+#endif
     m_bus = gst_pipeline_get_bus(GST_PIPELINE(m_pipeline));
     gst_bus_add_watch(m_bus, (GstBusFunc) bus_call, this);
     gst_object_unref(m_bus);
@@ -92,10 +105,12 @@ void TIGStreamerPipeline::on_new_pad(GstElement *element,
 
     // DEBUG:
     const gchar *checkName = gst_structure_get_name (str);
-    g_print("New pad on qtdemux, pad caps structure name: %s\n", checkName);
+    qDebug("New pad on qtdemux, pad caps structure name: %s", checkName);
 
     if (g_strrstr (gst_structure_get_name (str), "video"))
     {
+        qDebug("Pad is for video");
+
         sinkpad = gst_element_get_pad (p->m_videoqueue, "sink");
 
         g_object_set (G_OBJECT (p->m_videosink),
@@ -113,7 +128,13 @@ void TIGStreamerPipeline::on_new_pad(GstElement *element,
 
     }
     else
+    {
+        qDebug("Pad is for audio, ignoring for now");
+        gst_caps_unref (caps);
+        return;
+
         sinkpad = gst_element_get_pad (p->m_audioqueue, "sink");
+    }
 
     gst_caps_unref (caps);
 

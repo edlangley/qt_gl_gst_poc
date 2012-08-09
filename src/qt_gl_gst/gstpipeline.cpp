@@ -24,61 +24,6 @@ void GStreamerPipeline::configure()
 #ifdef Q_WS_WIN
     m_loop = g_main_loop_new (NULL, FALSE);
 #endif
-#if 0
-    if(m_videoLocation.isEmpty())
-    {
-        qDebug("No video file specified. Using video test source.");
-        m_pipeline =
-            GST_PIPELINE (gst_parse_launch
-                      ("videotestsrc ! "
-                       "video/x-raw-yuv, width=640, height=480, "
-                       "framerate=(fraction)30/1 ! "
-                       //"glupload ! gleffects effect=5 ! fakesink sync=1",
-                       "glupload ! fakesink sync=1",
-                       NULL));
-    }
-    else
-    {
-        qDebug("Loading video: %s", m_videoLocation.toAscii().data());
-        m_pipeline =
-            GST_PIPELINE (gst_parse_launch
-                      (QString("filesrc location=%1 ! decodebin2 ! "
-
-                               "glupload ! gleffects ! "
-                               "fakesink sync=1").arg(m_videoLocation).toAscii(),
-                       //"glupload ! gleffects effect=5 ! "
-                       NULL));
-    }
-
-    m_bus = gst_pipeline_get_bus(GST_PIPELINE(m_pipeline));
-    gst_bus_add_watch(m_bus, (GstBusFunc) bus_call, this);
-    gst_object_unref(m_bus);
-
-    /* Retrieve the last gl element */
-    GstElement *gl_element = gst_bin_get_by_name(GST_BIN(m_pipeline), "gleffects0");
-    if(!gl_element)
-    {
-        qDebug ("gl element could not be found");
-        return;
-    }
-    g_object_set(G_OBJECT (gl_element), "external-opengl-context",
-               this->m_glctx.contextId, NULL);
-    g_object_unref(gl_element);
-
-    gst_element_set_state(GST_ELEMENT(this->m_pipeline), GST_STATE_PAUSED);
-    GstState state = GST_STATE_PAUSED;
-    if(gst_element_get_state(GST_ELEMENT(this->m_pipeline),
-            &state, NULL, GST_CLOCK_TIME_NONE)
-            != GST_STATE_CHANGE_SUCCESS)
-    {
-        qDebug("failed to pause pipeline");
-        return;
-    }
-
-#endif
-
-
-
 
     /* Create the elements */
     this->m_pipeline = gst_pipeline_new (NULL);
@@ -97,11 +42,9 @@ void GStreamerPipeline::configure()
     this->m_audiosink = gst_element_factory_make ("alsasink", "audiosink");
     this->m_audioconvert = gst_element_factory_make ("audioconvert", "audioconvert");
     this->m_audioqueue = gst_element_factory_make ("queue", "audioqueue");
-//    m_videoqueue = gst_element_factory_make ("queue", "videoqueue");
 
     if (this->m_pipeline == NULL || this->m_source == NULL || this->m_decodebin == NULL ||
         this->m_videosink == NULL || this->m_audiosink == NULL || this->m_audioconvert == NULL || this->m_audioqueue == NULL)
-        //|| m_videoqueue == NULL)
         g_critical ("One of the GStreamer decoding elements is missing");
 
     /* Setup the pipeline */
@@ -113,7 +56,6 @@ void GStreamerPipeline::configure()
     gst_element_link (this->m_source, this->m_decodebin);
     gst_element_link (this->m_audioqueue, this->m_audioconvert);
     gst_element_link (this->m_audioconvert, this->m_audiosink);
-//    gst_element_link (m_videoqueue, videosink);
 
     m_bus = gst_pipeline_get_bus(GST_PIPELINE(m_pipeline));
     gst_bus_add_watch(m_bus, (GstBusFunc) bus_call, this);
@@ -125,14 +67,6 @@ void GStreamerPipeline::configure()
 
 void GStreamerPipeline::start()
 {
-#if 0
-    // set a callback to retrieve the gst gl textures
-    GstElement *fakesink = gst_bin_get_by_name(GST_BIN(this->m_pipeline),
-        "fakesink0");
-    g_object_set(G_OBJECT (fakesink), "signal-handoffs", TRUE, NULL);
-        g_signal_connect(fakesink, "handoff", G_CALLBACK (on_gst_buffer), this);
-    g_object_unref(fakesink);
-#endif
     GstStateChangeReturn ret =
     gst_element_set_state(GST_ELEMENT(this->m_pipeline), GST_STATE_PLAYING);
     if (ret == GST_STATE_CHANGE_FAILURE)
@@ -145,7 +79,7 @@ void GStreamerPipeline::start()
         {
             GError *err = NULL;
             gst_message_parse_error (msg, &err, NULL);
-            qDebug ("ERROR: %s", err->message);
+            qCritical ("ERROR: %s", err->message);
             g_error_free (err);
             gst_message_unref (msg);
         }
@@ -155,8 +89,6 @@ void GStreamerPipeline::start()
 #ifdef Q_WS_WIN
     g_main_loop_run(m_loop);
 #endif
-
-
 }
 
 void GStreamerPipeline::on_new_pad(GstElement *element,
@@ -172,8 +104,6 @@ void GStreamerPipeline::on_new_pad(GstElement *element,
 
     if (g_strrstr (gst_structure_get_name (str), "video"))
     {
-        //sinkpad = gst_element_get_pad (videoqueue, "sink");
-        //gst_pad_add_buffer_probe (pad, G_CALLBACK (on_gst_buffer), this);
         sinkpad = gst_element_get_pad (p->m_videosink, "sink");
 
         g_object_set (G_OBJECT (p->m_videosink),
@@ -188,7 +118,6 @@ void GStreamerPipeline::on_new_pad(GstElement *element,
                           "handoff",
                           G_CALLBACK(on_gst_buffer),
                           p);
-
     }
     else
         sinkpad = gst_element_get_pad (p->m_audioqueue, "sink");
@@ -211,6 +140,8 @@ GStreamerPipeline::on_gst_buffer(GstElement * element,
 
     if(p->m_vidInfoValid == false)
     {
+        qDebug("GStreamerPipeline: Received first frame of pipeline %d", p->getVidIx());
+
         GstCaps *caps = gst_pad_get_negotiated_caps (pad);
         if (caps)
         {
@@ -219,7 +150,7 @@ GStreamerPipeline::on_gst_buffer(GstElement * element,
             gst_structure_get_int (structure, "height", &(p->m_height));
         }
         else
-            g_print ("on_gst_buffer() - Could not get caps for pad!\n");
+            qCritical("on_gst_buffer() - Could not get caps for pad!\n");
 
         p->m_colFormat = discoverColFormat(buf);
 
@@ -228,7 +159,6 @@ GStreamerPipeline::on_gst_buffer(GstElement * element,
 
     /* ref then push buffer to use it in qt */
     gst_buffer_ref(buf);
-//    p->queue_input_buf.put((GstGLBuffer*)buf);
     p->queue_input_buf.put(buf);
 
     if (p->queue_input_buf.size() > 3)
@@ -293,7 +223,7 @@ GStreamerPipeline::bus_call(GstBus *bus, GstMessage *msg, GStreamerPipeline* p)
             g_error_free (err);
             if(debug)
             {
-            qDebug("Debug deails: %s", debug);
+            qDebug("Debug details: %s", debug);
             g_free(debug);
             }
             p->stop();
