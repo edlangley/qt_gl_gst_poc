@@ -16,6 +16,12 @@
 
 #include "camera.h"
 
+enum NavMode
+{
+    NavModeFPS,
+    NavModeRotate
+};
+
 class DemoItem;
 class TransformItem;
 
@@ -44,6 +50,8 @@ private:
     void updateTransforms();
 
     Camera m_camera;
+
+    NavMode m_navMode;
 
     qreal m_walkingVelocity;
     qreal m_strafingVelocity;

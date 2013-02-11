@@ -93,7 +93,8 @@ void Camera::updateMatrix() const
     QMatrix4x4 m;
     m.scale(-1, 1, 1);
     m *= fromRotation(m_yaw + 180, Qt::YAxis);
-    m.translate(-m_pos.x(), 0.04 * qSin(10 * m_time) + 0.1, -m_pos.y());
+//    m.translate(-m_pos.x(), 0.04 * qSin(10 * m_time) + 0.1, -m_pos.y());
+    m.translate(-m_pos.x(), 0.1, -m_pos.y());
     m = fromRotation(m_pitch, Qt::XAxis) * m;
     m_viewMatrix = m;
     m_viewProjectionMatrix = fromProjection(m_fov) * m_viewMatrix;

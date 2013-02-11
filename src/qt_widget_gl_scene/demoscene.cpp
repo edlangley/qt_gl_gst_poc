@@ -14,6 +14,8 @@ DemoScene::DemoScene()
     m_camera.setPos(QPointF(1.5, 1.5));
     m_camera.setYaw(0.1);
 
+    m_navMode = NavModeFPS;
+
     QTimer *timer = new QTimer(this);
     timer->setInterval(20);
     timer->start();
@@ -48,6 +50,7 @@ DemoScene::DemoScene()
 
     updateTransforms();
 
+    setFocusItem(0);
 }
 
 void DemoScene::updateTransforms()
