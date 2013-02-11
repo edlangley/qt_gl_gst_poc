@@ -175,26 +175,13 @@ void GLWidget::initializeGL()
 void GLWidget::paintEvent(QPaintEvent *event)
 {
     makeCurrent();
-    // Temp:
-    printOpenGLError(__FILE__, __LINE__);
 
     glDepthFunc(GL_LESS);
-    // Temp:
-    printOpenGLError(__FILE__, __LINE__);
     glEnable(GL_DEPTH_TEST);
-    // Temp:
-    printOpenGLError(__FILE__, __LINE__);
-//    glEnable(GL_TEXTURE_RECTANGLE_ARB);
-    // Temp:
-    printOpenGLError(__FILE__, __LINE__);
     glEnable (GL_BLEND);
-    // Temp:
-    printOpenGLError(__FILE__, __LINE__);
     glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // Temp:
-    printOpenGLError(__FILE__, __LINE__);
 
     this->modelViewMatrix = QMatrix4x4();
     this->modelViewMatrix.lookAt(QVector3D(0.0, 0.0, -5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
@@ -242,9 +229,6 @@ void GLWidget::paintEvent(QPaintEvent *event)
         printOpenGLError(__FILE__, __LINE__);
         break;
     }
-
-    // Temp:
-    printOpenGLError(__FILE__, __LINE__);
 
     // Draw videos around the object
     for(int vidIx = 0; vidIx < this->vidTextures.size(); vidIx++)
@@ -955,8 +939,15 @@ void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
     {
     case VidShaderNoEffect:
     case VidShaderNoEffectNormalisedTexCoords:
+        // Temp:
+        printOpenGLError(__FILE__, __LINE__);
+
         this->vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
+        // Temp:
+        printOpenGLError(__FILE__, __LINE__);
         this->vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->vidTextures[vidIx].height);
+        // Temp:
+        printOpenGLError(__FILE__, __LINE__);
         this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
 
         if(printErrors) printOpenGLError(__FILE__, __LINE__);

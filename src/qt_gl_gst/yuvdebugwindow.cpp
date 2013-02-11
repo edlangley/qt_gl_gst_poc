@@ -4,7 +4,7 @@ YuvDebugWindow::YuvDebugWindow(QWidget *parent) :
     QDialog(parent)
 {
     imageLabel = new QLabel(this);
-/*
+
     QImage yuvImage("./alphamasks/fade.jpg");
     if(yuvImage.isNull())
     {
@@ -15,7 +15,7 @@ YuvDebugWindow::YuvDebugWindow(QWidget *parent) :
 
         imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
     }
-*/
+
     QVBoxLayout *layout = new QVBoxLayout;
     layout->addWidget(imageLabel);
     setLayout(layout);
