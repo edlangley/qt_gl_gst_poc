@@ -37,11 +37,11 @@ public:
         QObject *parent);
     ~Pipeline();
 
-    virtual void configure() = 0;
-    virtual void start() = 0;
-    virtual void stop() = 0;
-    virtual void unconfigure() = 0;
-    void notifyNewFrame() {emit newFrameReady(m_vidIx);}
+    virtual void Configure() = 0;
+    virtual void Start() = 0;
+    virtual void Stop() = 0;
+    virtual void Unconfigure() = 0;
+    void NotifyNewFrame() {emit newFrameReady(m_vidIx);}
 
     int getVidIx() { return m_vidIx; }
     int getWidth() { return m_width; }

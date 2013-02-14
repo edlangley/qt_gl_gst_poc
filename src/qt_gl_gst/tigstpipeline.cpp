@@ -3,16 +3,20 @@
 TIGStreamerPipeline::TIGStreamerPipeline(int vidIx,
                    const QString &videoLocation,
                    QObject *parent)
-  : GStreamerPipeline(vidIx, videoLocation, parent)
+  : GStreamerPipeline(vidIx, videoLocation, parent),
+    m_qtdemux(NULL),
+    m_tividdecode(NULL),
+    m_tiaudiodecode(NULL),
+    m_videoqueue(NULL)
 {
-    this->configure();
+//    this->configure();
 }
 
 TIGStreamerPipeline::~TIGStreamerPipeline()
 {
 }
 
-void TIGStreamerPipeline::configure()
+void TIGStreamerPipeline::Configure()
 {
     gst_init (NULL, NULL);
 
@@ -100,6 +104,8 @@ void TIGStreamerPipeline::on_new_pad(GstElement *element,
     GstCaps *caps;
     GstStructure *str;
 
+    Q_UNUSED(element);
+
     caps = gst_pad_get_caps (pad);
     str = gst_caps_get_structure (caps, 0);
 
@@ -141,48 +147,3 @@ void TIGStreamerPipeline::on_new_pad(GstElement *element,
     gst_pad_link (pad, sinkpad);
     gst_object_unref (sinkpad);
 }
-
-#if 0
-/* fakesink handoff callback */
-void TIGStreamerPipeline::on_gst_buffer(GstElement * element,
-                        GstBuffer * buf,
-                        GstPad * pad,
-                        GStreamerPipeline* p)
-{
-    Q_UNUSED(pad)
-    Q_UNUSED(element)
-
-    if(p->m_vidInfoValid == false)
-    {
-        GstCaps *caps = gst_pad_get_negotiated_caps (pad);
-        if (caps)
-        {
-            GstStructure *structure = gst_caps_get_structure (caps, 0);
-            gst_structure_get_int (structure, "width", &(p->m_width));
-            gst_structure_get_int (structure, "height", &(p->m_height));
-        }
-        else
-            g_print ("on_gst_buffer() - Could not get caps for pad!\n");
-
-        p->m_colFormat = discoverColFormat(buf);
-
-        p->m_vidInfoValid = true;
-    }
-
-    /* ref then push buffer to use it in qt */
-    gst_buffer_ref(buf);
-//    p->queue_input_buf.put((GstGLBuffer*)buf);
-    p->queue_input_buf.put(buf);
-
-    if (p->queue_input_buf.size() > 3)
-        p->notifyNewFrame();
-
-    /* pop then unref buffer we have finished to use in qt */
-    if (p->queue_output_buf.size() > 3)
-    {
-        GstBuffer *buf_old = (GstBuffer*)(p->queue_output_buf.get());\
-        if (buf_old)
-            gst_buffer_unref(buf_old);
-    }
-}
-#endif

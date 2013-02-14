@@ -22,7 +22,8 @@ SOURCES += main.cpp \
     shaderlists.cpp \
     tigstpipeline.cpp \
     mainwindow.cpp \
-    yuvdebugwindow.cpp
+    yuvdebugwindow.cpp \
+    controlsform.cpp
 
 HEADERS  += \
     glwidget.h \
@@ -34,7 +35,8 @@ HEADERS  += \
     shaderlists.h \
     tigstpipeline.h \
     mainwindow.h \
-    yuvdebugwindow.h
+    yuvdebugwindow.h \
+    controlsform.h
 
 LIBS += -lgstreamer-0.10 \
     -lgstinterfaces-0.10 \
@@ -46,6 +48,9 @@ LIBS += -lgstreamer-0.10 \
     -lGL \
     -lGLEW
 
+FORMS += \
+    controlsform.ui
+
 INCLUDEPATH += /usr/include/gstreamer-0.10 \
     /usr/local/include/gstreamer-0.10 \
     /usr/include/glib-2.0 \
@@ -55,3 +60,4 @@ INCLUDEPATH += /usr/include/gstreamer-0.10 \
 # Model loading using Assimp:
 LIBS += -L. -lassimp
 INCLUDEPATH += /mnt/data/not_backedup/3d_existing_code/assimp--2.0.863-sdk/include/
+

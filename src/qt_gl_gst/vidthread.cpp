@@ -18,6 +18,8 @@ VidThread::VidThread(int vidIx,
     m_pipeline = new GStreamerPipeline(vidIx, m_videoLocation, this);
 #endif
 
+    m_pipeline->Configure();
+
     QObject::connect(m_pipeline, SIGNAL(newFrameReady(int)), this->parent(), renderer_slot, Qt::QueuedConnection);
     QObject::connect(this, SIGNAL(finished()), this, SLOT(reemitFinished()));
 }
@@ -29,13 +31,13 @@ VidThread::~VidThread()
 void VidThread::stop()
 {
     if(m_pipeline)
-      m_pipeline->stop();
+      m_pipeline->Stop();
 }
 
 void VidThread::run()
 {
     qDebug("Starting gst pipeline");
-    m_pipeline->start(); //it runs the gmainloop on win32
+    m_pipeline->Start(); //it runs the gmainloop on win32
 
 #ifndef Q_WS_WIN
     //works like the gmainloop on linux (GstEvent are handled)
@@ -43,7 +45,7 @@ void VidThread::run()
     exec();
 #endif
 
-    m_pipeline->unconfigure();
+    m_pipeline->Unconfigure();
 
     m_pipeline = NULL;
     // This is not a memory leak. Pipeline will be deleted

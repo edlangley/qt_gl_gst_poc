@@ -21,10 +21,10 @@ public:
         QObject *parent);
     ~GStreamerPipeline();
 
-    void configure();
-    void start();
-    void stop();
-    void unconfigure();
+    void Configure();
+    void Start();
+    void Stop();
+    void Unconfigure();
 
     // bit lazy just making these public for gst callbacks, but it'll do for now
     GstElement *m_source;

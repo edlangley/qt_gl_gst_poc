@@ -7,8 +7,8 @@ Pipeline::Pipeline(int vidIx,
   : QObject(parent),
     m_vidIx(vidIx),
     m_videoLocation(videoLocation),
-    m_vidInfoValid(false),
-    m_colFormat(ColFmt_Unknown)
+    m_colFormat(ColFmt_Unknown),
+    m_vidInfoValid(false)
 {
 }
 

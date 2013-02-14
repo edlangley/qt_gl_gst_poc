@@ -14,7 +14,7 @@ public:
         QObject *parent);
     ~TIGStreamerPipeline();
 
-    void configure();
+    void Configure();
 
     // bit lazy just making these public for gst callbacks, but it'll do for now
     GstElement *m_qtdemux;

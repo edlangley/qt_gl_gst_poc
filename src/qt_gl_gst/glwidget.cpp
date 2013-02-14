@@ -410,15 +410,15 @@ void GLWidget::newFrame(int vidIx)
                            PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer));
 
 #ifdef ENABLE_YUV_WINDOW
-        if((vidIx == 0) && (yuvWindow->isVisible()))
-        {
-            QImage yuvImage(PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer),
-                            this->vidTextures[vidIx].width,
-                            1.5f*this->vidTextures[vidIx].height,
-                            QImage::Format_Indexed8);
-            yuvImage.setColorTable(colourMap);
-            yuvWindow->imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
-        }
+            if((vidIx == 0) && (yuvWindow->isVisible()))
+            {
+                QImage yuvImage(PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer),
+                                this->vidTextures[vidIx].width,
+                                1.5f*this->vidTextures[vidIx].height,
+                                QImage::Format_Indexed8);
+                yuvImage.setColorTable(colourMap);
+                yuvWindow->imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
+            }
 #endif
             break;
         case ColFmt_UYVY:
@@ -429,15 +429,15 @@ void GLWidget::newFrame(int vidIx)
                            PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer));
 
 #ifdef ENABLE_YUV_WINDOW
-        if((vidIx == 0) && (yuvWindow->isVisible()))
-        {
-            QImage yuvImage(PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer),
-                            this->vidTextures[vidIx].width*2,
-                            this->vidTextures[vidIx].height,
-                            QImage::Format_Indexed8);
-            yuvImage.setColorTable(colourMap);
-            yuvWindow->imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
-        }
+            if((vidIx == 0) && (yuvWindow->isVisible()))
+            {
+                QImage yuvImage(PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer),
+                                this->vidTextures[vidIx].width*2,
+                                this->vidTextures[vidIx].height,
+                                QImage::Format_Indexed8);
+                yuvImage.setColorTable(colourMap);
+                yuvWindow->imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
+            }
 #endif
             break;
         default:
@@ -525,7 +525,7 @@ void GLWidget::gstThreadFinished(int vidIx)
     }
 }
 
-// Basic bits, input events, animation
+// Layout size
 QSize GLWidget::minimumSizeHint() const
 {
     return QSize(50, 50);
@@ -536,6 +536,7 @@ QSize GLWidget::sizeHint() const
     return QSize(400, 400);
 }
 
+// Animation
 static int qNormalizeAngle(int angle)
 {
     while (angle < 0)
@@ -544,20 +545,6 @@ static int qNormalizeAngle(int angle)
         angle -= 360 * 16;
 
     return angle;
-}
-
-void GLWidget::nextClearColor(void)
-{
-    switch( clearColor++ )
-    {
-        case 0:  qglClearColor(QColor(Qt::black));
-             break;
-        case 1:  qglClearColor(QColor::fromRgbF(0.2f, 0.2f, 0.3f, 1.0f));
-             break;
-        default: qglClearColor(QColor::fromRgbF(0.7f, 0.7f, 0.7f, 1.0f));
-             clearColor = 0;
-             break;
-    }
 }
 
 void GLWidget::animate()
@@ -597,6 +584,149 @@ void GLWidget::animate()
 
     update();
 }
+
+// Input events
+void GLWidget::cycleVidShaderSlot()
+{
+    int lastVidDrawn = this->vidTextures.size() - 1;
+    if (this->vidTextures[lastVidDrawn].effect >= VidShaderLast)
+        this->vidTextures[lastVidDrawn].effect = VidShaderFirst;
+    else
+        this->vidTextures[lastVidDrawn].effect = (VidShaderEffectType) ((int) this->vidTextures[lastVidDrawn].effect + 1);
+
+    setAppropriateVidShader(lastVidDrawn);
+    this->vidTextures[lastVidDrawn].shader->bind();
+    printOpenGLError(__FILE__, __LINE__);
+    // Setting shader variables here will have no effect as they are set on every render,
+    // but do it to check for errors, so we don't need to check on every render
+    // and program output doesn't go mad
+    setVidShaderVars(lastVidDrawn, true);
+}
+
+void GLWidget::cycleModelShaderSlot()
+{
+    if (currentModelEffect >= ModelEffectLast)
+        currentModelEffect = ModelEffectFirst;
+    else
+        currentModelEffect = (ModelEffectType) ((int) currentModelEffect + 1);
+}
+
+void GLWidget::showYUVWindowSlot()
+{
+    yuvWindow->show();
+}
+
+void GLWidget::loadVideoSlot()
+{
+    int lastVidDrawn = this->vidTextures.size() - 1;
+    this->vidThreads[lastVidDrawn]->setChooseNewOnFinished();
+    this->vidThreads[lastVidDrawn]->stop();
+}
+
+void GLWidget::loadModelSlot()
+{
+    // Load a Wavefront OBJ model file. Get the filename before doing anything else
+    QString objFileName = QFileDialog::getOpenFileName(0, "Select a Wavefront OBJ file",
+                                                          "./models/", "Wavefront OBJ (*.obj)");
+    if(objFileName.isNull() == false)
+    {
+        if(model->Load(objFileName) != 0)
+        {
+            qCritical() << "Couldn't load obj model file " << objFileName;
+        }
+        model->SetScale(MODEL_BOUNDARY_SIZE);
+    }
+}
+
+void GLWidget::loadAlphaSlot()
+{
+    // Load an alpha mask texture. Get the filename before doing anything else
+    QString alphaTexFileName = QFileDialog::getOpenFileName(0, "Select an image file",
+                                                            "./alphamasks/", "Pictures (*.bmp *.jpg *.jpeg *.gif);;All (*.*)");
+    if(alphaTexFileName.isNull() == false)
+    {
+        QImage alphaTexImage(alphaTexFileName);
+        if(alphaTexImage.isNull() == false)
+        {
+            // Ok, a new image is loaded
+            if(alphaTextureLoaded)
+            {
+                // Delete the old texture
+                alphaTextureLoaded = false;
+                deleteTexture(alphaTextureId);
+            }
+
+            // Bind new image to texture
+            alphaTextureId = bindTexture(alphaTexImage.mirrored(true, true), GL_TEXTURE_RECTANGLE_ARB);
+            alphaTexWidth = alphaTexImage.width();
+            alphaTexHeight = alphaTexImage.height();
+            // Update alpha tex co-ords in shader in case it is active:
+            setVidShaderVars((this->vidTextures.size() - 1), true);
+            alphaTextureLoaded = true;
+        }
+    }
+}
+
+void GLWidget::rotateToggleSlot(bool toggleState)
+{
+    Rotate = toggleState;
+
+    if (!Rotate)
+    {
+        fXInertiaOld = fXInertia;
+        fYInertiaOld = fYInertia;
+    }
+    else
+    {
+        fXInertia = fXInertiaOld;
+        fYInertia = fYInertiaOld;
+
+        // To prevent confusion, force some rotation
+        if ((fXInertia == 0.0) && (fYInertia == 0.0))
+            fXInertia = -0.5;
+    }
+}
+
+void GLWidget::stackVidsToggleSlot(int toggleState)
+{
+    if(toggleState == Qt::Checked)
+        stackVidQuads = true;
+    else
+        stackVidQuads = false;
+}
+
+void GLWidget::cycleBackgroundSlot()
+{
+    switch( clearColor++ )
+    {
+        case 0:  qglClearColor(QColor(Qt::black));
+             break;
+        case 1:  qglClearColor(QColor::fromRgbF(0.2f, 0.2f, 0.3f, 1.0f));
+             break;
+        default: qglClearColor(QColor::fromRgbF(0.7f, 0.7f, 0.7f, 1.0f));
+             clearColor = 0;
+             break;
+    }
+}
+
+void GLWidget::resetPosSlot()
+{
+    xRot = 0;
+    yRot = 35;
+    zRot = 0;
+    xLastIncr = 0;
+    yLastIncr = 0;
+    fXInertia = -0.5;
+    fYInertia = 0;
+    fScale    = 1.0;
+}
+
+void GLWidget::exitSlot()
+{
+    close();
+}
+
+
 
 void GLWidget::mousePressEvent(QMouseEvent *event)
 {
@@ -693,108 +823,37 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
             break;
         case Qt::Key_Escape:
         case Qt::Key_Q:
-            close();
+            exitSlot();
             break;
 
         case Qt::Key_B:
-            nextClearColor();
+            cycleBackgroundSlot();
             break;
 
         case Qt::Key_S:
-            {
-                int lastVidDrawn = this->vidTextures.size() - 1;
-                if (this->vidTextures[lastVidDrawn].effect >= VidShaderLast)
-                    this->vidTextures[lastVidDrawn].effect = VidShaderFirst;
-                else
-                    this->vidTextures[lastVidDrawn].effect = (VidShaderEffectType) ((int) this->vidTextures[lastVidDrawn].effect + 1);
-
-                setAppropriateVidShader(lastVidDrawn);
-                this->vidTextures[lastVidDrawn].shader->bind();
-                printOpenGLError(__FILE__, __LINE__);
-                // Setting shader variables here will have no effect as they are set on every render,
-                // but do it to check for errors, so we don't need to check on every render
-                // and program output doesn't go mad
-                setVidShaderVars(lastVidDrawn, true);
-            }
+            cycleVidShaderSlot();
             break;
         case Qt::Key_A:
-            {
-                // Load an alpha mask texture. Get the filename before doing anything else
-                QString alphaTexFileName = QFileDialog::getOpenFileName(0, "Select an image file",
-                                                                        "./alphamasks/", "Pictures (*.bmp *.jpg *.jpeg *.gif);;All (*.*)");
-                if(alphaTexFileName.isNull() == false)
-                {
-                    QImage alphaTexImage(alphaTexFileName);
-                    if(alphaTexImage.isNull() == false)
-                    {
-                        // Ok, a new image is loaded
-                        if(alphaTextureLoaded)
-                        {
-                            // Delete the old texture
-                            alphaTextureLoaded = false;
-                            deleteTexture(alphaTextureId);
-                        }
-
-                        // Bind new image to texture
-                        alphaTextureId = bindTexture(alphaTexImage.mirrored(true, true), GL_TEXTURE_RECTANGLE_ARB);
-                        alphaTexWidth = alphaTexImage.width();
-                        alphaTexHeight = alphaTexImage.height();
-                        // Update alpha tex co-ords in shader in case it is active:
-                        setVidShaderVars((this->vidTextures.size() - 1), true);
-                        alphaTextureLoaded = true;
-                    }
-                }
-            }
+            loadAlphaSlot();
             break;
         case Qt::Key_M:
-            {
-                // Load a Wavefront OBJ model file. Get the filename before doing anything else
-                QString objFileName = QFileDialog::getOpenFileName(0, "Select a Wavefront OBJ file",
-                                                                      "./models/", "Wavefront OBJ (*.obj)");
-                if(objFileName.isNull() == false)
-                {
-                    if(model->Load(objFileName) != 0)
-                    {
-                        qCritical() << "Couldn't load obj model file " << objFileName;
-                    }
-                    model->SetScale(MODEL_BOUNDARY_SIZE);
-                }
-            }
+            loadModelSlot();
             break;
         case Qt::Key_V:
-            {
-                int lastVidDrawn = this->vidTextures.size() - 1;
-                this->vidThreads[lastVidDrawn]->setChooseNewOnFinished();
-                this->vidThreads[lastVidDrawn]->stop();
-            }
+            loadVideoSlot();
             break;
         case Qt::Key_O:
-            if (currentModelEffect >= ModelEffectLast)
-                currentModelEffect = ModelEffectFirst;
-            else
-                currentModelEffect = (ModelEffectType) ((int) currentModelEffect + 1);
+            cycleModelShaderSlot();
             break;
         case Qt::Key_P:
-            stackVidQuads = !stackVidQuads;
+            // Decouple bool used within class from Qt check box state enum values
+            stackVidsToggleSlot(stackVidQuads ? Qt::Unchecked : Qt::Checked);
+            emit stackVidsStateChanged(stackVidQuads ? Qt::Checked : Qt::Unchecked);
             break;
 
         case Qt::Key_Space:
-            Rotate = !Rotate;
-
-            if (!Rotate)
-            {
-                fXInertiaOld = fXInertia;
-                fYInertiaOld = fYInertia;
-            }
-            else
-            {
-                fXInertia = fXInertiaOld;
-                fYInertia = fYInertiaOld;
-
-                // To prevent confusion, force some rotation
-                if ((fXInertia == 0.0) && (fYInertia == 0.0))
-                    fXInertia = -0.5;
-            }
+            rotateToggleSlot(Rotate ? false : true); //Qt::Unchecked : Qt::Checked)
+            emit rotateStateChanged(Rotate);// ? Qt::Checked : Qt::Unchecked);
             break;
         case Qt::Key_Plus:
             fScale += SCALE_INCREMENT;
@@ -803,33 +862,25 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
             fScale -= SCALE_INCREMENT;
             break;
         case Qt::Key_Home:
-            xRot = 0;
-            yRot = 35;
-            zRot = 0;
-            xLastIncr = 0;
-            yLastIncr = 0;
-            fXInertia = -0.5;
-            fYInertia = 0;
-            fScale    = 1.0;
-        break;
+            resetPosSlot();
+            break;
         case Qt::Key_Left:
            yRot -= 8;
-        break;
+            break;
         case Qt::Key_Right:
            yRot += 8;
-        break;
+            break;
         case Qt::Key_Up:
            xRot -= 8;
-        break;
+            break;
         case Qt::Key_Down:
            xRot += 8;
-        break;
+            break;
 
 #ifdef ENABLE_YUV_WINDOW
         case Qt::Key_Y:
-            //yuvWindow = new YuvDebugWindow(this);
-            yuvWindow->show();
-        break;
+            showYUVWindowSlot();
+            break;
 #endif
 
         default:

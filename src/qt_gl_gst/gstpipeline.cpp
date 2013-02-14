@@ -6,18 +6,24 @@ GStreamerPipeline::GStreamerPipeline(int vidIx,
                    const QString &videoLocation,
                    QObject *parent)
   : Pipeline(vidIx, videoLocation, parent),
+    m_source(NULL),
+    m_decodebin(NULL),
+    m_videosink(NULL),
+    m_audiosink(NULL),
+    m_audioconvert(NULL),
+    m_audioqueue(NULL),
     m_loop(NULL),
     m_bus(NULL),
     m_pipeline(NULL)
 {
-    this->configure();
+//    this->configure();
 }
 
 GStreamerPipeline::~GStreamerPipeline()
 {
 }
 
-void GStreamerPipeline::configure()
+void GStreamerPipeline::Configure()
 {
     gst_init (NULL, NULL);
 
@@ -65,7 +71,7 @@ void GStreamerPipeline::configure()
 
 }
 
-void GStreamerPipeline::start()
+void GStreamerPipeline::Start()
 {
     GstStateChangeReturn ret =
     gst_element_set_state(GST_ELEMENT(this->m_pipeline), GST_STATE_PLAYING);
@@ -90,6 +96,35 @@ void GStreamerPipeline::start()
     g_main_loop_run(m_loop);
 #endif
 }
+
+void GStreamerPipeline::Stop()
+{
+#ifdef Q_WS_WIN
+    g_main_loop_quit(m_loop);
+#else
+    emit stopRequested();
+#endif
+}
+
+void GStreamerPipeline::Unconfigure()
+{
+    gst_element_set_state(GST_ELEMENT(this->m_pipeline), GST_STATE_NULL);
+
+    GstBuffer *buf;
+    while(this->queue_input_buf.size())
+    {
+        buf = (GstBuffer*)(this->queue_input_buf.get());
+        gst_buffer_unref(buf);
+    }
+    while(this->queue_output_buf.size())
+    {
+        buf = (GstBuffer*)(this->queue_output_buf.get());
+        gst_buffer_unref(buf);
+    }
+
+    gst_object_unref(m_pipeline);
+}
+
 
 void GStreamerPipeline::on_new_pad(GstElement *element,
                      GstPad *pad,
@@ -129,8 +164,7 @@ void GStreamerPipeline::on_new_pad(GstElement *element,
 }
 
 /* fakesink handoff callback */
-void
-GStreamerPipeline::on_gst_buffer(GstElement * element,
+void GStreamerPipeline::on_gst_buffer(GstElement * element,
                         GstBuffer * buf,
                         GstPad * pad,
                         GStreamerPipeline* p)
@@ -162,7 +196,7 @@ GStreamerPipeline::on_gst_buffer(GstElement * element,
     p->queue_input_buf.put(buf);
 
     if (p->queue_input_buf.size() > 3)
-        p->notifyNewFrame();
+        p->NotifyNewFrame();
 
     /* pop then unref buffer we have finished to use in qt */
     if (p->queue_output_buf.size() > 3)
@@ -173,37 +207,7 @@ GStreamerPipeline::on_gst_buffer(GstElement * element,
     }
 }
 
-void
-GStreamerPipeline::stop()
-{
-#ifdef Q_WS_WIN
-    g_main_loop_quit(m_loop);
-#else
-    emit stopRequested();
-#endif
-}
-
-void GStreamerPipeline::unconfigure()
-{
-    gst_element_set_state(GST_ELEMENT(this->m_pipeline), GST_STATE_NULL);
-
-    GstBuffer *buf;
-    while(this->queue_input_buf.size())
-    {
-        buf = (GstBuffer*)(this->queue_input_buf.get());
-        gst_buffer_unref(buf);
-    }
-    while(this->queue_output_buf.size())
-    {
-        buf = (GstBuffer*)(this->queue_output_buf.get());
-        gst_buffer_unref(buf);
-    }
-
-    gst_object_unref(m_pipeline);
-}
-
-gboolean
-GStreamerPipeline::bus_call(GstBus *bus, GstMessage *msg, GStreamerPipeline* p)
+gboolean GStreamerPipeline::bus_call(GstBus *bus, GstMessage *msg, GStreamerPipeline* p)
 {
   Q_UNUSED(bus)
 
@@ -211,7 +215,7 @@ GStreamerPipeline::bus_call(GstBus *bus, GstMessage *msg, GStreamerPipeline* p)
     {
         case GST_MESSAGE_EOS:
             qDebug("End-of-stream received. Stopping.");
-            p->stop();
+            p->Stop();
         break;
 
         case GST_MESSAGE_ERROR:
@@ -226,7 +230,7 @@ GStreamerPipeline::bus_call(GstBus *bus, GstMessage *msg, GStreamerPipeline* p)
             qDebug("Debug details: %s", debug);
             g_free(debug);
             }
-            p->stop();
+            p->Stop();
             break;
         }
 

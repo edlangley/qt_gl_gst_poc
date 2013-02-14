@@ -4,7 +4,7 @@ YuvDebugWindow::YuvDebugWindow(QWidget *parent) :
     QDialog(parent)
 {
     imageLabel = new QLabel(this);
-
+#if 0
     QImage yuvImage("./alphamasks/fade.jpg");
     if(yuvImage.isNull())
     {
@@ -15,6 +15,8 @@ YuvDebugWindow::YuvDebugWindow(QWidget *parent) :
 
         imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
     }
+#endif
+    imageLabel->setText("Video will be shown here");
 
     QVBoxLayout *layout = new QVBoxLayout;
     layout->addWidget(imageLabel);

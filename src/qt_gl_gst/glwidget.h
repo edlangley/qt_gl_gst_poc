@@ -111,10 +111,25 @@ protected:
 
 Q_SIGNALS:
     void closeRequested();
+    void stackVidsStateChanged(bool newState);
+    void rotateStateChanged(bool newState);
 
 public Q_SLOTS:
+    /* Video related */
     void newFrame(int vidIx);
     void gstThreadFinished(int vidIx);
+    /* Input event handlers */
+    void cycleVidShaderSlot();
+    void cycleModelShaderSlot();
+    void showYUVWindowSlot();
+    void loadVideoSlot();
+    void loadModelSlot();
+    void loadAlphaSlot();
+    void rotateToggleSlot(bool toggleState);
+    void stackVidsToggleSlot(int toggleState);
+    void cycleBackgroundSlot();
+    void resetPosSlot();
+    void exitSlot();
 
 private:
     void setAppropriateVidShader(int vidIx);
@@ -123,7 +138,6 @@ private:
     int setupShader(QGLShaderProgram *prog, QString baseFileName, bool vertNeeded, bool fragNeeded);
     int setupShader(QGLShaderProgram *prog, GLShaderModule shaderList[], int listLen);
     int printOpenGLError(const char *file, int line);
-    void nextClearColor(void);
 
     // Camera:
     // Implement position later if a sky box is desired, and perhaps FPS mode

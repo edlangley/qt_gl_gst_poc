@@ -22,7 +22,8 @@ SOURCES += main.cpp \
     vidthread.cpp \
     shaderlists.cpp \
     model.cpp \
-    yuvdebugwindow.cpp
+    yuvdebugwindow.cpp \
+    controlsform.cpp
 
 HEADERS  += mainwindow.h \
     glwidget.h \
@@ -33,7 +34,11 @@ HEADERS  += mainwindow.h \
     AsyncQueue.h \
     shaderlists.h \
     model.h \
-    yuvdebugwindow.h
+    yuvdebugwindow.h \
+    controlsform.h
+
+FORMS += \
+    controlsform.ui
 
 unix {
     CONFIG += link_pkgconfig
