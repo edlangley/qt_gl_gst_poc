@@ -134,6 +134,8 @@ void GStreamerPipeline::on_new_pad(GstElement *element,
     GstCaps *caps;
     GstStructure *str;
 
+    Q_UNUSED(element);
+
     caps = gst_pad_get_caps (pad);
     str = gst_caps_get_structure (caps, 0);
 
@@ -174,7 +176,7 @@ void GStreamerPipeline::on_gst_buffer(GstElement * element,
 
     if(p->m_vidInfoValid == false)
     {
-        qDebug("GStreamerPipeline: Received first frame of pipeline %d", p->getVidIx());
+        PIPELINE_DEBUG("GStreamerPipeline: Received first frame of vid %d", p->getVidIx());
 
         GstCaps *caps = gst_pad_get_negotiated_caps (pad);
         if (caps)
@@ -194,17 +196,26 @@ void GStreamerPipeline::on_gst_buffer(GstElement * element,
     /* ref then push buffer to use it in qt */
     gst_buffer_ref(buf);
     p->queue_input_buf.put(buf);
+    PIPELINE_DEBUG("GStreamerPipeline: vid %d pushed buffer %p to incoming queue", p->getVidIx(), buf);
 
     if (p->queue_input_buf.size() > 3)
+    {
+        PIPELINE_DEBUG("GStreamerPipeline: vid %d incoming queue size is > 3, sending a buf to GLES", p->getVidIx());
         p->NotifyNewFrame();
+    }
 
-    /* pop then unref buffer we have finished to use in qt */
+    /* pop then unref buffer we have finished using in qt */
     if (p->queue_output_buf.size() > 3)
     {
-        GstBuffer *buf_old = (GstBuffer*)(p->queue_output_buf.get());\
+        PIPELINE_DEBUG("GStreamerPipeline: vid %d outgoing queue size is > 3, returning a buf to gstreamer", p->getVidIx());
+
+        GstBuffer *buf_old = (GstBuffer*)(p->queue_output_buf.get());
         if (buf_old)
             gst_buffer_unref(buf_old);
+
+        PIPELINE_DEBUG("GStreamerPipeline: vid %d popped buffer %p from outgoing queue", p->getVidIx(), buf_old);
     }
+    PIPELINE_DEBUG("GStreamerPipeline: vid %d queue_output_buf size is = %d", p->getVidIx(), p->queue_output_buf.size());
 }
 
 gboolean GStreamerPipeline::bus_call(GstBus *bus, GstMessage *msg, GStreamerPipeline* p)

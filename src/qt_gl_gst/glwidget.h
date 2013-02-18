@@ -2,6 +2,7 @@
 #define GLWIDGET_H
 
 #define ENABLE_YUV_WINDOW       1
+#define ENABLE_FRAME_COUNT_DEBUG 1
 
 #include <QApplication>
 #include <QGLWidget>
@@ -77,6 +78,9 @@ typedef struct _VidTextureInfo
     QVector2D triStripVertices[NUM_VIDTEXTURE_VERTICES_X * NUM_VIDTEXTURE_VERTICES_Y];
     QVector2D triStripTexCoords[NUM_VIDTEXTURE_VERTICES_X * NUM_VIDTEXTURE_VERTICES_Y];
     QVector2D triStripAlphaTexCoords[NUM_VIDTEXTURE_VERTICES_X * NUM_VIDTEXTURE_VERTICES_Y];
+#ifdef ENABLE_FRAME_COUNT_DEBUG
+    int frameCount;
+#endif
 } VidTextureInfo;
 
 typedef struct _GLShaderModule

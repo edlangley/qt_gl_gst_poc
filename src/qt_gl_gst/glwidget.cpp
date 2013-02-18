@@ -153,15 +153,12 @@ void GLWidget::initializeGL()
         newInfo.texInfoValid = false;
         newInfo.buffer = NULL;
         newInfo.effect = VidShaderNoEffect;
+#ifdef ENABLE_FRAME_COUNT_DEBUG
+        newInfo.frameCount = 0;
+#endif
 
         this->vidTextures.push_back(newInfo);
     }
-
-    for(int vidIx = 0; vidIx < this->vidThreads.size(); vidIx++)
-    {
-        this->vidThreads[vidIx]->start();
-    }
-
 
     model = new Model();
     if(model->Load(DFLT_OBJ_MODEL_FILE_NAME) != 0)
@@ -170,10 +167,17 @@ void GLWidget::initializeGL()
     }
     model->SetScale(MODEL_BOUNDARY_SIZE);
 
+
+    for(int vidIx = 0; vidIx < this->vidThreads.size(); vidIx++)
+    {
+        this->vidThreads[vidIx]->start();
+    }
 }
 
 void GLWidget::paintEvent(QPaintEvent *event)
 {
+    Q_UNUSED(event);
+
     makeCurrent();
 
     glDepthFunc(GL_LESS);
@@ -340,23 +344,30 @@ void GLWidget::newFrame(int vidIx)
 {
     if(this->vidThreads[vidIx])
     {
+#ifdef ENABLE_FRAME_COUNT_DEBUG
+        qDebug("GLWidget: vid %d frame %d", vidIx, this->vidTextures[vidIx].frameCount++);
+#endif
 
         Pipeline *pipeline = this->vidThreads[vidIx]->getPipeline();
         if(!pipeline)
           return;
 
         /* Vid frame pointer is initialized as null */
-        if (this->vidTextures[vidIx].buffer)
+        if(this->vidTextures[vidIx].buffer)
+        {
             pipeline->queue_output_buf.put(this->vidTextures[vidIx].buffer);
+            PIPELINE_DEBUG("GLWidget: vid %d pushed buffer %p to outgoing queue", vidIx, this->vidTextures[vidIx].buffer);
+        }
 
         this->vidTextures[vidIx].buffer = pipeline->queue_input_buf.get();
+        PIPELINE_DEBUG("GLWidget: vid %d popped buffer %p from incoming queue", vidIx, this->vidTextures[vidIx].buffer);
 
         this->makeCurrent();
 
         // Load the gst buf into a texture
         if(this->vidTextures[vidIx].texInfoValid == false)
         {
-            qDebug("GLWidget: Received first frame of pipeline %d", vidIx);
+            PIPELINE_DEBUG("GLWidget: Received first frame of vid %d", vidIx);
 
             // Try and keep this fairly portable to other media frameworks by
             // leaving info extraction within pipeline class
@@ -452,6 +463,10 @@ void GLWidget::newFrame(int vidIx)
 
 void GLWidget::gstThreadFinished(int vidIx)
 {
+#ifdef ENABLE_FRAME_COUNT_DEBUG
+    this->vidTextures[vidIx].frameCount = 0;
+#endif
+
     if(this->closing)
     {
         delete(this->vidThreads[vidIx]);

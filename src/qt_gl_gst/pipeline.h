@@ -5,6 +5,10 @@
 
 #include "AsyncQueue.h"
 
+#define ENABLE_PIPELINE_DEBUG       1
+#define PIPELINE_DEBUG(x...)        do { if (ENABLE_PIPELINE_DEBUG) qDebug(x); } while (0)
+
+
 typedef enum _ColFormat
 {
     // these relate to fourCC codes, but abstract video framework system from outside:

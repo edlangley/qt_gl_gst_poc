@@ -35,6 +35,8 @@ ControlsForm::~ControlsForm()
 
 void ControlsForm::closeEvent(QCloseEvent* event)
 {
+    Q_UNUSED(event);
+
     // At the mo, tell parent to close too.
     QWidget* _parent = dynamic_cast<QWidget*>(parent());
     if(_parent)
