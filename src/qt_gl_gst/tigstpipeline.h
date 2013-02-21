@@ -11,6 +11,7 @@ class TIGStreamerPipeline : public GStreamerPipeline
 public:
     TIGStreamerPipeline(int vidIx,
         const QString &videoLocation,
+        const char *renderer_slot,
         QObject *parent);
     ~TIGStreamerPipeline();
 
@@ -23,9 +24,6 @@ public:
     GstElement *m_videoqueue;
 
 protected:
-    // Can use base class version?:
-    //static void on_gst_buffer(GstElement * element, GstBuffer * buf, GstPad * pad, TIGStreamerPipeline* p);
-
     static void on_new_pad(GstElement *element, GstPad *pad, TIGStreamerPipeline* p);
 };
 

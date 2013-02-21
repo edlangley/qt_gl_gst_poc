@@ -19,7 +19,6 @@ SOURCES += main.cpp \
     pipeline.cpp \
     gstpipeline.cpp \
     tigstpipeline.cpp \
-    vidthread.cpp \
     shaderlists.cpp \
     model.cpp \
     yuvdebugwindow.cpp \
@@ -30,7 +29,6 @@ HEADERS  += mainwindow.h \
     pipeline.h \
     gstpipeline.h \
     tigstpipeline.h \
-    vidthread.h \
     AsyncQueue.h \
     shaderlists.h \
     model.h \

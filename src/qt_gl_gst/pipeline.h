@@ -5,7 +5,7 @@
 
 #include "AsyncQueue.h"
 
-#define ENABLE_PIPELINE_DEBUG       1
+#define ENABLE_PIPELINE_DEBUG       0//1
 #define PIPELINE_DEBUG(x...)        do { if (ENABLE_PIPELINE_DEBUG) qDebug(x); } while (0)
 
 
@@ -38,28 +38,30 @@ class Pipeline : public QObject
 public:
     Pipeline(int vidIx,
         const QString &videoLocation,
+        const char *renderer_slot,
         QObject *parent);
     ~Pipeline();
 
     virtual void Configure() = 0;
     virtual void Start() = 0;
-    virtual void Stop() = 0;
-    virtual void Unconfigure() = 0;
-    void NotifyNewFrame() {emit newFrameReady(m_vidIx);}
+    void NotifyNewFrame() { emit newFrameReady(m_vidIx); }
 
     int getVidIx() { return m_vidIx; }
     int getWidth() { return m_width; }
     int getHeight() { return m_height; }
     ColFormat getColourFormat() { return m_colFormat; }
 
-    //AsyncQueue<GstBuffer*> queue_input_buf;
-    //AsyncQueue<GstBuffer*> queue_output_buf;
-    AsyncQueue<void*> queue_input_buf;
-    AsyncQueue<void*> queue_output_buf;
+    bool isFinished() { return this->m_finished; }
+
+    AsyncQueue<void*> m_incomingBufQueue;
+    AsyncQueue<void*> m_outgoingBufQueue;
 
 Q_SIGNALS:
     void newFrameReady(int vidIx);
-    void stopRequested();
+    void finished(int vidIx);
+
+public slots:
+    virtual void Stop() = 0;
 
 protected:
     int m_vidIx;
@@ -68,6 +70,7 @@ protected:
     int m_height;
     ColFormat m_colFormat;
     bool m_vidInfoValid;
+    bool m_finished;
 };
 
 #if defined OMAP3530

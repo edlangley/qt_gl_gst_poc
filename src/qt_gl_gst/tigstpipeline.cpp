@@ -2,14 +2,14 @@
 
 TIGStreamerPipeline::TIGStreamerPipeline(int vidIx,
                    const QString &videoLocation,
+                   const char *renderer_slot,
                    QObject *parent)
-  : GStreamerPipeline(vidIx, videoLocation, parent),
+  : GStreamerPipeline(vidIx, videoLocation, renderer_slot, parent),
     m_qtdemux(NULL),
     m_tividdecode(NULL),
     m_tiaudiodecode(NULL),
     m_videoqueue(NULL)
 {
-//    this->configure();
 }
 
 TIGStreamerPipeline::~TIGStreamerPipeline()
@@ -52,6 +52,11 @@ void TIGStreamerPipeline::Configure()
                  "max-size-bytes", 0,
                  NULL);
 
+    /* Need more buffers ref'd at once than default provides from TIViddec2 otherwise
+       pipeline stalls up before we get round to unreferencing used buffers again */
+    g_object_set(G_OBJECT(this->m_tividdecode),
+                 "numOutputBufs", 10,
+                 NULL);
 
     if (this->m_pipeline == NULL || this->m_source == NULL || this->m_qtdemux == NULL ||
         this->m_tividdecode == NULL || this->m_tiaudiodecode == NULL ||

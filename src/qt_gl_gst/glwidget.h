@@ -2,7 +2,7 @@
 #define GLWIDGET_H
 
 #define ENABLE_YUV_WINDOW       1
-#define ENABLE_FRAME_COUNT_DEBUG 1
+//#define ENABLE_FRAME_COUNT_DEBUG 1
 
 #include <QApplication>
 #include <QGLWidget>
@@ -19,7 +19,6 @@
 
 #include <iostream>
 
-#include "vidthread.h"
 #include "pipeline.h"
 
 #include "model.h"
@@ -105,6 +104,7 @@ public:
 
 protected:
     void initializeGL();
+    virtual Pipeline* createPipeline(int vidIx);
     void paintEvent(QPaintEvent *event);
     void resizeGL(int width, int height);
     void mousePressEvent(QMouseEvent *event);
@@ -121,7 +121,7 @@ Q_SIGNALS:
 public Q_SLOTS:
     /* Video related */
     void newFrame(int vidIx);
-    void gstThreadFinished(int vidIx);
+    void pipelineFinished(int vidIx);
     /* Input event handlers */
     void cycleVidShaderSlot();
     void cycleModelShaderSlot();
@@ -172,7 +172,7 @@ private:
 
     int getCallingGstVecIx(int vidIx);
     QVector<QString> videoLoc;
-    QVector<VidThread*>vidThreads;
+    QVector<Pipeline*>vidPipelines;
     bool closing;
     QVector<VidTextureInfo> vidTextures;
 

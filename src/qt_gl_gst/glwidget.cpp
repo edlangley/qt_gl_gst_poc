@@ -2,7 +2,6 @@
 #include "glwidget.h"
 #include "shaderlists.h"
 
-//#ifdef GLES2
 #ifndef RECTTEX
  #define GL_TEXTURE_RECTANGLE_ARB            GL_TEXTURE_2D
  #define GL_TEXTURE0_ARB                     GL_TEXTURE0
@@ -57,11 +56,13 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     // Instantiate video pipeline for each filename specified
     for(int vidIx = 0; vidIx < this->videoLoc.size(); vidIx++)
     {
-        this->vidThreads.push_back(new VidThread(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this));
-        QObject::connect(this->vidThreads[vidIx], SIGNAL(finished(int)),
-                         this, SLOT(gstThreadFinished(int)));
+        this->vidPipelines.push_back(this->createPipeline(vidIx));
+        QObject::connect(this->vidPipelines[vidIx], SIGNAL(finished(int)),
+                         this, SLOT(pipelineFinished(int)));
         QObject::connect(this, SIGNAL(closeRequested()),
-                         this->vidThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
+                         this->vidPipelines[vidIx], SLOT(Stop()), Qt::QueuedConnection);
+
+        this->vidPipelines[vidIx]->Configure();
     }
 
     model = NULL;
@@ -146,7 +147,7 @@ void GLWidget::initializeGL()
 
 
     // Create entry in tex info vector for all pipelines
-    for(int vidIx = 0; vidIx < this->vidThreads.size(); vidIx++)
+    for(int vidIx = 0; vidIx < this->vidPipelines.size(); vidIx++)
     {
         VidTextureInfo newInfo;
         glGenTextures(1, &newInfo.texId);
@@ -168,10 +169,24 @@ void GLWidget::initializeGL()
     model->SetScale(MODEL_BOUNDARY_SIZE);
 
 
-    for(int vidIx = 0; vidIx < this->vidThreads.size(); vidIx++)
+    for(int vidIx = 0; vidIx < this->vidPipelines.size(); vidIx++)
     {
-        this->vidThreads[vidIx]->start();
+        this->vidPipelines[vidIx]->Start();
     }
+}
+
+Pipeline* GLWidget::createPipeline(int vidIx)
+{
+    Pipeline *newPipelinePtr;
+
+    // Could derive a custom class later to clean this up a bit
+#if defined OMAP3530
+    newPipelinePtr = new TIGStreamerPipeline(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this);
+#elif defined UNIX
+    newPipelinePtr = new GStreamerPipeline(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this);
+#endif
+
+    return newPipelinePtr;
 }
 
 void GLWidget::paintEvent(QPaintEvent *event)
@@ -207,7 +222,6 @@ void GLWidget::paintEvent(QPaintEvent *event)
         glActiveTexture(GL_TEXTURE0_ARB);
         glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[0].texId);
 
-        //this->vidTextures[0].effect = VidShaderNoEffectNormalisedTexCoords;
         this->vidTextures[0].effect = VidShaderLitNormalisedTexCoords;
         setAppropriateVidShader(0);
         this->vidTextures[0].shader->bind();
@@ -263,8 +277,6 @@ void GLWidget::paintEvent(QPaintEvent *event)
                 this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapB", ColourComponentSwapB);
             }
 
-            //GLfloat vidWidth = this->vidTextures[vidIx].width;
-            //GLfloat vidHeight = this->vidTextures[vidIx].height;
             QGLShaderProgram *vidShader = this->vidTextures[vidIx].shader;
 
             QMatrix4x4 vidQuadMatrix = this->modelViewMatrix;
@@ -342,24 +354,24 @@ void GLWidget::resizeGL(int wid, int ht)
 
 void GLWidget::newFrame(int vidIx)
 {
-    if(this->vidThreads[vidIx])
+    if(this->vidPipelines[vidIx])
     {
 #ifdef ENABLE_FRAME_COUNT_DEBUG
         qDebug("GLWidget: vid %d frame %d", vidIx, this->vidTextures[vidIx].frameCount++);
 #endif
 
-        Pipeline *pipeline = this->vidThreads[vidIx]->getPipeline();
-        if(!pipeline)
-          return;
+        Pipeline *pipeline = this->vidPipelines[vidIx];
+
 
         /* Vid frame pointer is initialized as null */
         if(this->vidTextures[vidIx].buffer)
         {
-            pipeline->queue_output_buf.put(this->vidTextures[vidIx].buffer);
+            pipeline->m_outgoingBufQueue.put(this->vidTextures[vidIx].buffer);
             PIPELINE_DEBUG("GLWidget: vid %d pushed buffer %p to outgoing queue", vidIx, this->vidTextures[vidIx].buffer);
         }
 
-        this->vidTextures[vidIx].buffer = pipeline->queue_input_buf.get();
+        // TODO: use getWithWait here, return if NULL
+        this->vidTextures[vidIx].buffer = pipeline->m_incomingBufQueue.get();
         PIPELINE_DEBUG("GLWidget: vid %d popped buffer %p from incoming queue", vidIx, this->vidTextures[vidIx].buffer);
 
         this->makeCurrent();
@@ -409,8 +421,6 @@ void GLWidget::newFrame(int vidIx)
         glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-        // TODO: Put switch around this and alter width and height arguments based on video
-        // format:
         switch(this->vidTextures[vidIx].colourFormat)
         {
         case ColFmt_I420:
@@ -461,7 +471,7 @@ void GLWidget::newFrame(int vidIx)
     }
 }
 
-void GLWidget::gstThreadFinished(int vidIx)
+void GLWidget::pipelineFinished(int vidIx)
 {
 #ifdef ENABLE_FRAME_COUNT_DEBUG
     this->vidTextures[vidIx].frameCount = 0;
@@ -469,21 +479,21 @@ void GLWidget::gstThreadFinished(int vidIx)
 
     if(this->closing)
     {
-        delete(this->vidThreads[vidIx]);
-        this->vidThreads.replace(vidIx, NULL);
+        delete(this->vidPipelines[vidIx]);
+        this->vidPipelines.replace(vidIx, NULL);
         this->vidTextures[vidIx].texInfoValid = false;
 
         // Check if any gst threads left, if not close
         bool allFinished = true;
-        for(int i = 0; i < this->vidThreads.size(); i++)
+        for(int i = 0; i < this->vidPipelines.size(); i++)
         {
-            if(this->vidThreads[i] != NULL)
+            if(this->vidPipelines[i] != NULL)
             {
                 // Catch any threads which were already finished at quitting time
-                if(this->vidThreads[i]->isFinished())
+                if(this->vidPipelines[i]->isFinished())
                 {
-                    delete(this->vidThreads[vidIx]);
-                    this->vidThreads.replace(vidIx, NULL);
+                    delete(this->vidPipelines[vidIx]);
+                    this->vidPipelines.replace(vidIx, NULL);
                     this->vidTextures[vidIx].texInfoValid = false;
                 }
                 else
@@ -498,45 +508,45 @@ void GLWidget::gstThreadFinished(int vidIx)
             close();
         }
     }
-    else if(this->vidThreads[vidIx]->chooseNew())
+#if 0
+    else if(this->vidPipelines[vidIx]->chooseNew())
     {
-        // TODO: call a choosenewvid function here and do that from keyboard event handler if pipeline already stopped
-
         // Confirm that we have the new filename before we do anything else
         QString newFileName = QFileDialog::getOpenFileName(0, "Select a video file",
                                                            ".", "Videos (*.avi *.mkv *.ogg *.asf *.mov);;All (*.*)");
 
         if(newFileName.isNull() == false)
         {
-            delete(this->vidThreads[vidIx]);
+            delete(this->vidPipelines[vidIx]);
             this->vidTextures[vidIx].texInfoValid = false;
 
             this->videoLoc[vidIx] = newFileName;
-            this->vidThreads[vidIx] =
-              new VidThread(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this);
+            this->vidPipelines[vidIx] = createPipeline(vidIx);
 
-            QObject::connect(this->vidThreads[vidIx], SIGNAL(finished(int)),
-                             this, SLOT(gstThreadFinished(int)));
+            QObject::connect(this->vidPipelines[vidIx], SIGNAL(finished(int)),
+                             this, SLOT(pipelineFinished(int)));
             QObject::connect(this, SIGNAL(closeRequested()),
-                             this->vidThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
+                             this->vidPipelines[vidIx], SLOT(stop()), Qt::QueuedConnection);
 
-            this->vidThreads[vidIx]->start();
+            this->vidPipelines[vidIx]->Configure();
+            this->vidPipelines[vidIx]->Start();
         }
     }
+#endif
     else
     {
-        delete(this->vidThreads[vidIx]);
+        delete(this->vidPipelines[vidIx]);
         this->vidTextures[vidIx].texInfoValid = false;
 
-        this->vidThreads[vidIx] =
-          new VidThread(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this);
+        this->vidPipelines[vidIx] = createPipeline(vidIx);
 
-        QObject::connect(this->vidThreads[vidIx], SIGNAL(finished(int)),
-                         this, SLOT(gstThreadFinished(int)));
+        QObject::connect(this->vidPipelines[vidIx], SIGNAL(finished(int)),
+                         this, SLOT(pipelineFinished(int)));
         QObject::connect(this, SIGNAL(closeRequested()),
-                         this->vidThreads[vidIx], SLOT(stop()), Qt::QueuedConnection);
+                         this->vidPipelines[vidIx], SLOT(Stop()), Qt::QueuedConnection);
 
-        this->vidThreads[vidIx]->start();
+        this->vidPipelines[vidIx]->Configure();
+        this->vidPipelines[vidIx]->Start();
     }
 }
 
@@ -634,8 +644,16 @@ void GLWidget::showYUVWindowSlot()
 void GLWidget::loadVideoSlot()
 {
     int lastVidDrawn = this->vidTextures.size() - 1;
-    this->vidThreads[lastVidDrawn]->setChooseNewOnFinished();
-    this->vidThreads[lastVidDrawn]->stop();
+
+    QString newFileName = QFileDialog::getOpenFileName(0, "Select a video file",
+                                                         ".", "Videos (*.avi *.mkv *.ogg *.asf *.mov);;All (*.*)");
+    if(newFileName.isNull() == false)
+    {
+        this->videoLoc[lastVidDrawn] = newFileName;
+
+        //this->vidPipelines[lastVidDrawn]->setChooseNewOnFinished();
+        this->vidPipelines[lastVidDrawn]->Stop();
+    }
 }
 
 void GLWidget::loadModelSlot()
@@ -913,9 +931,9 @@ void GLWidget::closeEvent(QCloseEvent* event)
 
         // Just in case, check now if any gst threads still exist, if not, close application now
         bool allFinished = true;
-        for(int i = 0; i < this->vidThreads.size(); i++)
+        for(int i = 0; i < this->vidPipelines.size(); i++)
         {
-            if(this->vidThreads[i] != NULL)
+            if(this->vidPipelines[i] != NULL)
             {
                 allFinished = false;
                 break;

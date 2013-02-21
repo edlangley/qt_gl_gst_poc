@@ -4,8 +4,9 @@
 
 GStreamerPipeline::GStreamerPipeline(int vidIx,
                    const QString &videoLocation,
+                   const char *renderer_slot,
                    QObject *parent)
-  : Pipeline(vidIx, videoLocation, parent),
+  : Pipeline(vidIx, videoLocation, renderer_slot, parent),
     m_source(NULL),
     m_decodebin(NULL),
     m_videosink(NULL),
@@ -16,7 +17,12 @@ GStreamerPipeline::GStreamerPipeline(int vidIx,
     m_bus(NULL),
     m_pipeline(NULL)
 {
-//    this->configure();
+    m_incomingBufThread = new GstIncomingBufThread(this, this);
+    m_outgoingBufThread = new GstOutgoingBufThread(this, this);
+
+    QObject::connect(m_incomingBufThread, SIGNAL(finished()), this, SLOT(cleanUp()));
+    //QObject::connect(m_outgoingBufThread, SIGNAL(finished()), this, SLOT(cleanUp()));
+
 }
 
 GStreamerPipeline::~GStreamerPipeline()
@@ -92,9 +98,9 @@ void GStreamerPipeline::Start()
         return;
     }
 
-#ifdef Q_WS_WIN
-    g_main_loop_run(m_loop);
-#endif
+    // Start the threads:
+    m_incomingBufThread->start();
+    m_outgoingBufThread->start();
 }
 
 void GStreamerPipeline::Stop()
@@ -106,25 +112,32 @@ void GStreamerPipeline::Stop()
 #endif
 }
 
-void GStreamerPipeline::Unconfigure()
+void GStreamerPipeline::cleanUp()
 {
     gst_element_set_state(GST_ELEMENT(this->m_pipeline), GST_STATE_NULL);
 
+    // Wait for both threads to finish up
+    m_incomingBufThread->wait(200);
+    m_outgoingBufThread->wait(200);
+
     GstBuffer *buf;
-    while(this->queue_input_buf.size())
+    while(this->m_incomingBufQueue.size())
     {
-        buf = (GstBuffer*)(this->queue_input_buf.get());
+        buf = (GstBuffer*)(this->m_incomingBufQueue.get());
         gst_buffer_unref(buf);
     }
-    while(this->queue_output_buf.size())
+    while(this->m_outgoingBufQueue.size())
     {
-        buf = (GstBuffer*)(this->queue_output_buf.get());
+        buf = (GstBuffer*)(this->m_outgoingBufQueue.get());
         gst_buffer_unref(buf);
     }
 
     gst_object_unref(m_pipeline);
-}
 
+    // Done
+    m_finished = true;
+    emit finished(m_vidIx);
+}
 
 void GStreamerPipeline::on_new_pad(GstElement *element,
                      GstPad *pad,
@@ -195,27 +208,28 @@ void GStreamerPipeline::on_gst_buffer(GstElement * element,
 
     /* ref then push buffer to use it in qt */
     gst_buffer_ref(buf);
-    p->queue_input_buf.put(buf);
+    p->m_incomingBufQueue.put(buf);
     PIPELINE_DEBUG("GStreamerPipeline: vid %d pushed buffer %p to incoming queue", p->getVidIx(), buf);
 
-    if (p->queue_input_buf.size() > 3)
+    if (p->m_incomingBufQueue.size() > 3)
     {
         PIPELINE_DEBUG("GStreamerPipeline: vid %d incoming queue size is > 3, sending a buf to GLES", p->getVidIx());
         p->NotifyNewFrame();
     }
-
+#if 0
     /* pop then unref buffer we have finished using in qt */
-    if (p->queue_output_buf.size() > 3)
+    if (p->m_outgoingBufQueue.size() > 3)
     {
         PIPELINE_DEBUG("GStreamerPipeline: vid %d outgoing queue size is > 3, returning a buf to gstreamer", p->getVidIx());
 
-        GstBuffer *buf_old = (GstBuffer*)(p->queue_output_buf.get());
+        GstBuffer *buf_old = (GstBuffer*)(p->m_outgoingBufQueue.get());
         if (buf_old)
             gst_buffer_unref(buf_old);
 
         PIPELINE_DEBUG("GStreamerPipeline: vid %d popped buffer %p from outgoing queue", p->getVidIx(), buf_old);
     }
-    PIPELINE_DEBUG("GStreamerPipeline: vid %d queue_output_buf size is = %d", p->getVidIx(), p->queue_output_buf.size());
+    PIPELINE_DEBUG("GStreamerPipeline: vid %d m_outgoingBufQueue size is = %d", p->getVidIx(), p->m_outgoingBufQueue.size());
+#endif
 }
 
 gboolean GStreamerPipeline::bus_call(GstBus *bus, GstMessage *msg, GStreamerPipeline* p)
@@ -404,3 +418,46 @@ ColFormat GStreamerPipeline::discoverColFormat(GstBuffer * buf)
 
     return ret;
 }
+
+
+void GstIncomingBufThread::run()
+{
+    PIPELINE_DEBUG("GStreamerPipeline: vid %d incoming buf thread started", m_pipelinePtr->getVidIx());
+
+#ifndef Q_WS_WIN
+    //works like the gmainloop on linux (GstEvent are handled)
+    QObject::connect(m_pipelinePtr, SIGNAL(stopRequested()), this, SLOT(quit()));
+    exec();
+#else
+    g_main_loop_run(m_loop);
+#endif
+
+    // Incoming handling is all done in the static on_gst_buffer callback
+
+    PIPELINE_DEBUG("GStreamerPipeline: vid %d incoming buf thread finished", m_pipelinePtr->getVidIx());
+}
+
+
+void GstOutgoingBufThread::run()
+{
+    PIPELINE_DEBUG("GStreamerPipeline: vid %d outgoing buf thread started", m_pipelinePtr->getVidIx());
+
+    QObject::connect(m_pipelinePtr, SIGNAL(stopRequested()), this, SLOT(quit()));
+
+    while(m_keepRunningOutgoingThread)
+    {
+        /* Pop then unref buffer we have finished using in qt,
+           block here if queue is empty */
+        GstBuffer *buf_old = (GstBuffer*)(m_pipelinePtr->m_outgoingBufQueue.get());
+        if (buf_old)
+            gst_buffer_unref(buf_old);
+
+        PIPELINE_DEBUG("GStreamerPipeline: vid %d popped buffer %p from outgoing queue", m_pipelinePtr->getVidIx(), buf_old);
+        PIPELINE_DEBUG("GStreamerPipeline: vid %d m_outgoingBufQueue size is = %d", m_pipelinePtr->getVidIx(), m_pipelinePtr->m_outgoingBufQueue.size());
+
+    }
+
+    PIPELINE_DEBUG("GStreamerPipeline: vid %d outgoing buf thread finished", m_pipelinePtr->getVidIx());
+}
+
+

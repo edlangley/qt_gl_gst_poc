@@ -17,7 +17,6 @@ SOURCES += main.cpp \
     glwidget.cpp \
     model.cpp \
     gstpipeline.cpp \
-    vidthread.cpp \
     pipeline.cpp \
     shaderlists.cpp \
     tigstpipeline.cpp \
@@ -30,7 +29,6 @@ HEADERS  += \
     AsyncQueue.h \
     model.h \
     gstpipeline.h \
-    vidthread.h \
     pipeline.h \
     shaderlists.h \
     tigstpipeline.h \
