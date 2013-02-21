@@ -81,6 +81,17 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
         colourMap.push_back(qRgb(i, i, i));
     }
 #endif
+
+    dataFilesDir = QString(qgetenv(DATA_DIR_ENV_VAR_NAME));
+    if(dataFilesDir.size() == 0)
+    {
+        dataFilesDir = QString("./");
+    }
+    else
+    {
+        dataFilesDir += "/";
+    }
+    qDebug("dataFilesDir = %s", dataFilesDir.toAscii().constData());
 }
 
 GLWidget::~GLWidget()
@@ -162,9 +173,9 @@ void GLWidget::initializeGL()
     }
 
     model = new Model();
-    if(model->Load(DFLT_OBJ_MODEL_FILE_NAME) != 0)
+    if(model->Load(dataFilesDir + DFLT_OBJ_MODEL_FILE_NAME) != 0)
     {
-        qCritical() << "Couldn't load obj model file " << DFLT_OBJ_MODEL_FILE_NAME;
+        qCritical() << "Couldn't load obj model file " << dataFilesDir + DFLT_OBJ_MODEL_FILE_NAME;
     }
     model->SetScale(MODEL_BOUNDARY_SIZE);
 
@@ -646,7 +657,7 @@ void GLWidget::loadVideoSlot()
     int lastVidDrawn = this->vidTextures.size() - 1;
 
     QString newFileName = QFileDialog::getOpenFileName(0, "Select a video file",
-                                                         ".", "Videos (*.avi *.mkv *.ogg *.asf *.mov);;All (*.*)");
+                                                         dataFilesDir + "videos/", "Videos (*.avi *.mkv *.ogg *.asf *.mov);;All (*.*)");
     if(newFileName.isNull() == false)
     {
         this->videoLoc[lastVidDrawn] = newFileName;
@@ -660,7 +671,7 @@ void GLWidget::loadModelSlot()
 {
     // Load a Wavefront OBJ model file. Get the filename before doing anything else
     QString objFileName = QFileDialog::getOpenFileName(0, "Select a Wavefront OBJ file",
-                                                          "./models/", "Wavefront OBJ (*.obj)");
+                                                          dataFilesDir + "models/", "Wavefront OBJ (*.obj)");
     if(objFileName.isNull() == false)
     {
         if(model->Load(objFileName) != 0)
@@ -675,7 +686,7 @@ void GLWidget::loadAlphaSlot()
 {
     // Load an alpha mask texture. Get the filename before doing anything else
     QString alphaTexFileName = QFileDialog::getOpenFileName(0, "Select an image file",
-                                                            "./alphamasks/", "Pictures (*.bmp *.jpg *.jpeg *.gif);;All (*.*)");
+                                                            dataFilesDir + "alphamasks/", "Pictures (*.bmp *.jpg *.jpeg *.gif);;All (*.*)");
     if(alphaTexFileName.isNull() == false)
     {
         QImage alphaTexImage(alphaTexFileName);
@@ -1089,6 +1100,8 @@ void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
 
 int GLWidget::loadShaderFile(QString fileName, QString &shaderSource)
 {
+    fileName = dataFilesDir + fileName;
+
     shaderSource.clear();
     QFile file(fileName);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))

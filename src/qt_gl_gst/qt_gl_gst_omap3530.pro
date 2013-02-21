@@ -47,12 +47,5 @@ unix {
 LIBS += -L. -lassimp
 INCLUDEPATH += /mnt/data/not_backedup/3d_existing_code/assimp--2.0.863-sdk/include/
 
-# DVSDK doesn't have GFX SDK lib files in linux-devkit directory:
-#LIBS += -L/mnt/data/not_backedup/Graphics_SDK_4_05_00_02/GFX_Linux_SDK/OGLES2/SDKPackage/Builds/OGLES2/LinuxOMAP3/lib \
-#LIBS += -L/mnt/data/not_backedup/ti-dvsdk_omap3530-evm_4_01_00_09/omap35x_graphics_sdk_4.00.00.01/GFX_Linux_SDK/OGLES2/SDKPackage/Builds/OGLES2/LinuxOMAP3/lib \
-#    -lIMGegl \
-#    -lEGL \
-#    -lGLESv2 \
-#    -lOpenVG \
-#    -lsrv_um 
-
+target.path += /opt/qt_gl_gst-omap3530evm
+INSTALLS += target
