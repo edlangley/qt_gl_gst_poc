@@ -29,7 +29,7 @@ HEADERS  += mainwindow.h \
     pipeline.h \
     gstpipeline.h \
     tigstpipeline.h \
-    AsyncQueue.h \
+    asyncwaitingqueue.h \
     shaderlists.h \
     model.h \
     yuvdebugwindow.h \
