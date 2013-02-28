@@ -21,7 +21,6 @@ GStreamerPipeline::GStreamerPipeline(int vidIx,
     m_outgoingBufThread = new GstOutgoingBufThread(this, this);
 
     QObject::connect(m_incomingBufThread, SIGNAL(finished()), this, SLOT(cleanUp()));
-    //QObject::connect(m_outgoingBufThread, SIGNAL(finished()), this, SLOT(cleanUp()));
 
 }
 
@@ -117,18 +116,18 @@ void GStreamerPipeline::cleanUp()
     gst_element_set_state(GST_ELEMENT(this->m_pipeline), GST_STATE_NULL);
 
     // Wait for both threads to finish up
-    m_incomingBufThread->wait(200);
-    m_outgoingBufThread->wait(200);
+    m_incomingBufThread->wait(QUEUE_CLEANUP_WAITTIME_MS);
+    m_outgoingBufThread->wait(QUEUE_CLEANUP_WAITTIME_MS);
 
     GstBuffer *buf;
     while(this->m_incomingBufQueue.size())
     {
-        buf = (GstBuffer*)(this->m_incomingBufQueue.get());
+        this->m_incomingBufQueue.get((void**)(&buf));
         gst_buffer_unref(buf);
     }
     while(this->m_outgoingBufQueue.size())
     {
-        buf = (GstBuffer*)(this->m_outgoingBufQueue.get());
+        this->m_outgoingBufQueue.get((void**)(&buf));
         gst_buffer_unref(buf);
     }
 
@@ -216,20 +215,6 @@ void GStreamerPipeline::on_gst_buffer(GstElement * element,
         PIPELINE_DEBUG("GStreamerPipeline: vid %d incoming queue size is > 3, sending a buf to GLES", p->getVidIx());
         p->NotifyNewFrame();
     }
-#if 0
-    /* pop then unref buffer we have finished using in qt */
-    if (p->m_outgoingBufQueue.size() > 3)
-    {
-        PIPELINE_DEBUG("GStreamerPipeline: vid %d outgoing queue size is > 3, returning a buf to gstreamer", p->getVidIx());
-
-        GstBuffer *buf_old = (GstBuffer*)(p->m_outgoingBufQueue.get());
-        if (buf_old)
-            gst_buffer_unref(buf_old);
-
-        PIPELINE_DEBUG("GStreamerPipeline: vid %d popped buffer %p from outgoing queue", p->getVidIx(), buf_old);
-    }
-    PIPELINE_DEBUG("GStreamerPipeline: vid %d m_outgoingBufQueue size is = %d", p->getVidIx(), p->m_outgoingBufQueue.size());
-#endif
 }
 
 gboolean GStreamerPipeline::bus_call(GstBus *bus, GstMessage *msg, GStreamerPipeline* p)
@@ -448,9 +433,12 @@ void GstOutgoingBufThread::run()
     {
         /* Pop then unref buffer we have finished using in qt,
            block here if queue is empty */
-        GstBuffer *buf_old = (GstBuffer*)(m_pipelinePtr->m_outgoingBufQueue.get());
-        if (buf_old)
-            gst_buffer_unref(buf_old);
+        GstBuffer *buf_old = NULL;
+        if(m_pipelinePtr->m_outgoingBufQueue.get((void**)(&buf_old), QUEUE_THREADBLOCK_WAITTIME_MS))
+        {
+            if (buf_old)
+                gst_buffer_unref(buf_old);
+        }
 
         PIPELINE_DEBUG("GStreamerPipeline: vid %d popped buffer %p from outgoing queue", m_pipelinePtr->getVidIx(), buf_old);
         PIPELINE_DEBUG("GStreamerPipeline: vid %d m_outgoingBufQueue size is = %d", m_pipelinePtr->getVidIx(), m_pipelinePtr->m_outgoingBufQueue.size());

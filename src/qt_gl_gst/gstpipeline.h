@@ -12,6 +12,9 @@
 
 #define PIPELINE_BUFFER_VID_DATA_START    GST_BUFFER_DATA
 
+#define QUEUE_CLEANUP_WAITTIME_MS         200
+#define QUEUE_THREADBLOCK_WAITTIME_MS     50
+
 class GStreamerPipeline;
 
 // The incoming buffer thread is really only needed in Windows

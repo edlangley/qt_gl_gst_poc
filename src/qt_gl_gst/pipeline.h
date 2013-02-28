@@ -3,7 +3,7 @@
 
 #include <QWidget>
 
-#include "AsyncQueue.h"
+#include "asyncwaitingqueue.h"
 
 #define ENABLE_PIPELINE_DEBUG       0//1
 #define PIPELINE_DEBUG(x...)        do { if (ENABLE_PIPELINE_DEBUG) qDebug(x); } while (0)

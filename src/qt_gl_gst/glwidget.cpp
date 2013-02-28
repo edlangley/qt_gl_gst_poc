@@ -381,8 +381,16 @@ void GLWidget::newFrame(int vidIx)
             PIPELINE_DEBUG("GLWidget: vid %d pushed buffer %p to outgoing queue", vidIx, this->vidTextures[vidIx].buffer);
         }
 
-        // TODO: use getWithWait here, return if NULL
-        this->vidTextures[vidIx].buffer = pipeline->m_incomingBufQueue.get();
+        void *newBuf = NULL;
+        if(pipeline->m_incomingBufQueue.get(&newBuf) == true)
+        {
+            this->vidTextures[vidIx].buffer = newBuf;
+        }
+        else
+        {
+            return;
+        }
+
         PIPELINE_DEBUG("GLWidget: vid %d popped buffer %p from incoming queue", vidIx, this->vidTextures[vidIx].buffer);
 
         this->makeCurrent();

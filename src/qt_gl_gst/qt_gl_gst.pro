@@ -26,7 +26,7 @@ SOURCES += main.cpp \
 
 HEADERS  += \
     glwidget.h \
-    AsyncQueue.h \
+    asyncwaitingqueue.h \
     model.h \
     gstpipeline.h \
     pipeline.h \
