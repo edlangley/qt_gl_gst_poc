@@ -13,24 +13,24 @@
 
 GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     QGLWidget(QGLFormat(QGL::DoubleBuffer | QGL::DepthBuffer | QGL::Rgba), parent),
-    closing(false),
-    brickProg(this)
+    m_closing(false),
+    m_brickProg(this)
 {
-    xRot = 0;
-    yRot = 0;
-    zRot = 0;
-    fScale = 1.0;
-    lastPos = QPoint(0, 0);
+    m_xRot = 0;
+    m_yRot = 0;
+    m_zRot = 0;
+    m_scaleValue = 1.0;
+    m_lastPos = QPoint(0, 0);
 
-    Rotate = 1;
-    xLastIncr = 0;
-    yLastIncr = 0;
-    fXInertia = -0.5;
-    fYInertia = 0;
+    m_rotateOn = 1;
+    m_xLastIncr = 0;
+    m_yLastIncr = 0;
+    m_xInertia = -0.5;
+    m_yInertia = 0;
 
-    clearColor = 0;
-    stackVidQuads = false;
-    currentModelEffect = ModelEffectFirst;
+    m_clearColorIndex = 0;
+    m_stackVidQuads = false;
+    m_currentModelEffectIndex = ModelEffectFirst;
 
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(animate()));
@@ -39,59 +39,59 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     grabKeyboard();
 
     // Video shader effects vars
-    ColourHilightRangeMin = QVector4D(0.0, 0.0, 0.0, 0.0);
-    ColourHilightRangeMax = QVector4D(0.2, 0.2, 1.0, 1.0); // show shades of blue as they are
-    ColourComponentSwapR = QVector4D(1.0, 1.0, 1.0, 0.0);
-    ColourComponentSwapG = QVector4D(1.0, 1.0, 0.0, 0.0);
-    ColourComponentSwapB = QVector4D(1.0, 1.0, 1.0, 0.0);
-    ColourSwapDirUpwards = true;
-    alphaTextureLoaded = false;
+    m_colourHilightRangeMin = QVector4D(0.0, 0.0, 0.0, 0.0);
+    m_colourHilightRangeMax = QVector4D(0.2, 0.2, 1.0, 1.0); // show shades of blue as they are
+    m_colourComponentSwapR = QVector4D(1.0, 1.0, 1.0, 0.0);
+    m_colourComponentSwapG = QVector4D(1.0, 1.0, 0.0, 0.0);
+    m_colourComponentSwapB = QVector4D(1.0, 1.0, 1.0, 0.0);
+    m_colourSwapDirUpwards = true;
+    m_alphaTextureLoaded = false;
 
     // Video pipeline
     for(int vidIx = 1; vidIx < argc; vidIx++)
     {
-        videoLoc.push_back(QString(argv[vidIx]));
+        m_videoLoc.push_back(QString(argv[vidIx]));
     }
 
     // Instantiate video pipeline for each filename specified
-    for(int vidIx = 0; vidIx < this->videoLoc.size(); vidIx++)
+    for(int vidIx = 0; vidIx < this->m_videoLoc.size(); vidIx++)
     {
-        this->vidPipelines.push_back(this->createPipeline(vidIx));
-        QObject::connect(this->vidPipelines[vidIx], SIGNAL(finished(int)),
+        this->m_vidPipelines.push_back(this->createPipeline(vidIx));
+        QObject::connect(this->m_vidPipelines[vidIx], SIGNAL(finished(int)),
                          this, SLOT(pipelineFinished(int)));
         QObject::connect(this, SIGNAL(closeRequested()),
-                         this->vidPipelines[vidIx], SLOT(Stop()), Qt::QueuedConnection);
+                         this->m_vidPipelines[vidIx], SLOT(Stop()), Qt::QueuedConnection);
 
-        this->vidPipelines[vidIx]->Configure();
+        this->m_vidPipelines[vidIx]->Configure();
     }
 
-    model = NULL;
+    m_model = NULL;
 
-    frames = 0;
+    m_frames = 0;
     setAttribute(Qt::WA_PaintOnScreen);
     setAttribute(Qt::WA_NoSystemBackground);
     setAutoBufferSwap(false);
     setAutoFillBackground(false);
 
 #ifdef ENABLE_YUV_WINDOW
-    yuvWindow = new YuvDebugWindow(this);
+    m_yuvWindow = new YuvDebugWindow(this);
     /* Build a colour map */
     for(int i = 0; i < 256; i++)
     {
-        colourMap.push_back(qRgb(i, i, i));
+        m_colourMap.push_back(qRgb(i, i, i));
     }
 #endif
 
-    dataFilesDir = QString(qgetenv(DATA_DIR_ENV_VAR_NAME));
-    if(dataFilesDir.size() == 0)
+    m_dataFilesDir = QString(qgetenv(DATA_DIR_ENV_VAR_NAME));
+    if(m_dataFilesDir.size() == 0)
     {
-        dataFilesDir = QString("./");
+        m_dataFilesDir = QString("./");
     }
     else
     {
-        dataFilesDir += "/";
+        m_dataFilesDir += "/";
     }
-    qDebug("dataFilesDir = %s", dataFilesDir.toAscii().constData());
+    qDebug("m_dataFilesDir = %s", m_dataFilesDir.toAscii().constData());
 }
 
 GLWidget::~GLWidget()
@@ -127,38 +127,38 @@ void GLWidget::initializeGL()
 
     qglClearColor(QColor(Qt::black));
 
-    setupShader(&brickProg, BrickGLESShaderList, NUM_SHADERS_BRICKGLES);
+    setupShader(&m_brickProg, BrickGLESShaderList, NUM_SHADERS_BRICKGLES);
     // Set up initial uniform values
-//    brickProg.setUniformValue("BrickColor", QVector3D(1.0, 0.3, 0.2));
-//    brickProg.setUniformValue("MortarColor", QVector3D(0.85, 0.86, 0.84));
-    brickProg.setUniformValue("BrickColor", QVector3D(0.0, 0.5, 1.0));
-    brickProg.setUniformValue("MortarColor", QVector3D(0.0, 0.5, 1.0));
-    brickProg.setUniformValue("BrickSize", QVector3D(0.30, 0.15, 0.30));
-    brickProg.setUniformValue("BrickPct", QVector3D(0.90, 0.85, 0.90));
-    brickProg.setUniformValue("LightPosition", QVector3D(0.0, 0.0, 4.0));
-    brickProg.release();
+//    m_brickProg.setUniformValue("BrickColor", QVector3D(1.0, 0.3, 0.2));
+//    m_brickProg.setUniformValue("MortarColor", QVector3D(0.85, 0.86, 0.84));
+    m_brickProg.setUniformValue("BrickColor", QVector3D(0.0, 0.5, 1.0));
+    m_brickProg.setUniformValue("MortarColor", QVector3D(0.0, 0.5, 1.0));
+    m_brickProg.setUniformValue("BrickSize", QVector3D(0.30, 0.15, 0.30));
+    m_brickProg.setUniformValue("BrickPct", QVector3D(0.90, 0.85, 0.90));
+    m_brickProg.setUniformValue("LightPosition", QVector3D(0.0, 0.0, 4.0));
+    m_brickProg.release();
     printOpenGLError(__FILE__, __LINE__);
 
-    setupShader(&I420NoEffectNormalised, VidI420NoEffectNormalisedShaderList, NUM_SHADERS_VIDI420_NOEFFECT_NORMALISED);
-    setupShader(&I420LitNormalised, VidI420LitNormalisedShaderList, NUM_SHADERS_VIDI420_LIT_NORMALISED);
-    setupShader(&I420NoEffect, VidI420NoEffectShaderList, NUM_SHADERS_VIDI420_NOEFFECT);
-    setupShader(&I420ColourHilight, VidI420ColourHilightShaderList, NUM_SHADERS_VIDI420_COLOURHILIGHT);
-    setupShader(&I420ColourHilightSwap, VidI420ColourHilightSwapShaderList, NUM_SHADERS_VIDI420_COLOURHILIGHTSWAP);
-    setupShader(&I420AlphaMask, VidI420AlphaMaskShaderList, NUM_SHADERS_VIDI420_ALPHAMASK);
+    setupShader(&m_I420NoEffectNormalised, VidI420NoEffectNormalisedShaderList, NUM_SHADERS_VIDI420_NOEFFECT_NORMALISED);
+    setupShader(&m_I420LitNormalised, VidI420LitNormalisedShaderList, NUM_SHADERS_VIDI420_LIT_NORMALISED);
+    setupShader(&m_I420NoEffect, VidI420NoEffectShaderList, NUM_SHADERS_VIDI420_NOEFFECT);
+    setupShader(&m_I420ColourHilight, VidI420ColourHilightShaderList, NUM_SHADERS_VIDI420_COLOURHILIGHT);
+    setupShader(&m_I420ColourHilightSwap, VidI420ColourHilightSwapShaderList, NUM_SHADERS_VIDI420_COLOURHILIGHTSWAP);
+    setupShader(&m_I420AlphaMask, VidI420AlphaMaskShaderList, NUM_SHADERS_VIDI420_ALPHAMASK);
 
-    setupShader(&UYVYNoEffectNormalised, VidUYVYNoEffectNormalisedShaderList, NUM_SHADERS_VIDUYVY_NOEFFECT_NORMALISED);
-    setupShader(&UYVYLitNormalised, VidUYVYLitNormalisedShaderList, NUM_SHADERS_VIDUYVY_LIT_NORMALISED);
-    setupShader(&UYVYNoEffect, VidUYVYNoEffectShaderList, NUM_SHADERS_VIDUYVY_NOEFFECT);
-    setupShader(&UYVYColourHilight, VidUYVYColourHilightShaderList, NUM_SHADERS_VIDUYVY_COLOURHILIGHT);
-    setupShader(&UYVYColourHilightSwap, VidUYVYColourHilightSwapShaderList, NUM_SHADERS_VIDUYVY_COLOURHILIGHTSWAP);
-    setupShader(&UYVYAlphaMask, VidUYVYAlphaMaskShaderList, NUM_SHADERS_VIDUYVY_ALPHAMASK);
+    setupShader(&m_UYVYNoEffectNormalised, VidUYVYNoEffectNormalisedShaderList, NUM_SHADERS_VIDUYVY_NOEFFECT_NORMALISED);
+    setupShader(&m_UYVYLitNormalised, VidUYVYLitNormalisedShaderList, NUM_SHADERS_VIDUYVY_LIT_NORMALISED);
+    setupShader(&m_UYVYNoEffect, VidUYVYNoEffectShaderList, NUM_SHADERS_VIDUYVY_NOEFFECT);
+    setupShader(&m_UYVYColourHilight, VidUYVYColourHilightShaderList, NUM_SHADERS_VIDUYVY_COLOURHILIGHT);
+    setupShader(&m_UYVYColourHilightSwap, VidUYVYColourHilightSwapShaderList, NUM_SHADERS_VIDUYVY_COLOURHILIGHTSWAP);
+    setupShader(&m_UYVYAlphaMask, VidUYVYAlphaMaskShaderList, NUM_SHADERS_VIDUYVY_ALPHAMASK);
 
     // Set uniforms for vid shaders along with other stream details when first
     // frame comes through
 
 
     // Create entry in tex info vector for all pipelines
-    for(int vidIx = 0; vidIx < this->vidPipelines.size(); vidIx++)
+    for(int vidIx = 0; vidIx < this->m_vidPipelines.size(); vidIx++)
     {
         VidTextureInfo newInfo;
         glGenTextures(1, &newInfo.texId);
@@ -169,20 +169,20 @@ void GLWidget::initializeGL()
         newInfo.frameCount = 0;
 #endif
 
-        this->vidTextures.push_back(newInfo);
+        this->m_vidTextures.push_back(newInfo);
     }
 
-    model = new Model();
-    if(model->Load(dataFilesDir + DFLT_OBJ_MODEL_FILE_NAME) != 0)
+    m_model = new Model();
+    if(m_model->Load(m_dataFilesDir + DFLT_OBJ_MODEL_FILE_NAME) != 0)
     {
-        qCritical() << "Couldn't load obj model file " << dataFilesDir + DFLT_OBJ_MODEL_FILE_NAME;
+        qCritical() << "Couldn't load obj model file " << m_dataFilesDir + DFLT_OBJ_MODEL_FILE_NAME;
     }
-    model->SetScale(MODEL_BOUNDARY_SIZE);
+    m_model->SetScale(MODEL_BOUNDARY_SIZE);
 
 
-    for(int vidIx = 0; vidIx < this->vidPipelines.size(); vidIx++)
+    for(int vidIx = 0; vidIx < this->m_vidPipelines.size(); vidIx++)
     {
-        this->vidPipelines[vidIx]->Start();
+        this->m_vidPipelines[vidIx]->Start();
     }
 }
 
@@ -192,9 +192,9 @@ Pipeline* GLWidget::createPipeline(int vidIx)
 
     // Could derive a custom class later to clean this up a bit
 #if defined OMAP3530
-    newPipelinePtr = new TIGStreamerPipeline(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this);
+    newPipelinePtr = new TIGStreamerPipeline(vidIx, this->m_videoLoc[vidIx], SLOT(newFrame(int)), this);
 #elif defined UNIX
-    newPipelinePtr = new GStreamerPipeline(vidIx, this->videoLoc[vidIx], SLOT(newFrame(int)), this);
+    newPipelinePtr = new GStreamerPipeline(vidIx, this->m_videoLoc[vidIx], SLOT(newFrame(int)), this);
 #endif
 
     return newPipelinePtr;
@@ -213,36 +213,36 @@ void GLWidget::paintEvent(QPaintEvent *event)
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    this->modelViewMatrix = QMatrix4x4();
-    this->modelViewMatrix.lookAt(QVector3D(0.0, 0.0, -5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
-    this->modelViewMatrix.rotate(-zRot / 16.0, 0.0, 0.0, 1.0);
-    this->modelViewMatrix.rotate(-xRot / 16.0, 1.0, 0.0, 0.0);
-    this->modelViewMatrix.rotate(yRot / 16.0, 0.0, 1.0, 0.0);
-    this->modelViewMatrix.scale(fScale);
+    this->m_modelViewMatrix = QMatrix4x4();
+    this->m_modelViewMatrix.lookAt(QVector3D(0.0, 0.0, -5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
+    this->m_modelViewMatrix.rotate(-m_zRot / 16.0, 0.0, 0.0, 1.0);
+    this->m_modelViewMatrix.rotate(-m_xRot / 16.0, 1.0, 0.0, 0.0);
+    this->m_modelViewMatrix.rotate(m_yRot / 16.0, 0.0, 1.0, 0.0);
+    this->m_modelViewMatrix.scale(m_scaleValue);
 
     // Draw an object in the middle
-    ModelEffectType enabledModelEffect = currentModelEffect;
+    ModelEffectType enabledModelEffect = m_currentModelEffectIndex;
     QGLShaderProgram *currentShader = NULL;
     switch(enabledModelEffect)
     {
     case ModelEffectBrick:
-        brickProg.bind();
-        currentShader = &brickProg;
+        m_brickProg.bind();
+        currentShader = &m_brickProg;
         break;
     case ModelEffectVideo:
         glActiveTexture(GL_TEXTURE0_ARB);
-        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[0].texId);
+        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->m_vidTextures[0].texId);
 
-        this->vidTextures[0].effect = VidShaderLitNormalisedTexCoords;
+        this->m_vidTextures[0].effect = VidShaderLitNormalisedTexCoords;
         setAppropriateVidShader(0);
-        this->vidTextures[0].shader->bind();
+        this->m_vidTextures[0].shader->bind();
         setVidShaderVars(0, false);
 
-        currentShader = this->vidTextures[0].shader;
+        currentShader = this->m_vidTextures[0].shader;
         break;
     }
 
-    model->Draw(modelViewMatrix, projectionMatrix, currentShader, false);
+    m_model->Draw(m_modelViewMatrix, m_projectionMatrix, currentShader, false);
 
     switch(enabledModelEffect)
     {
@@ -250,9 +250,9 @@ void GLWidget::paintEvent(QPaintEvent *event)
         currentShader->release();
         break;
     case ModelEffectVideo:
-        this->vidTextures[0].effect = VidShaderNoEffect;
+        this->m_vidTextures[0].effect = VidShaderNoEffect;
         setAppropriateVidShader(0);
-        this->vidTextures[0].shader->bind();
+        this->m_vidTextures[0].shader->bind();
         setVidShaderVars(0, false);
 
         printOpenGLError(__FILE__, __LINE__);
@@ -260,71 +260,71 @@ void GLWidget::paintEvent(QPaintEvent *event)
     }
 
     // Draw videos around the object
-    for(int vidIx = 0; vidIx < this->vidTextures.size(); vidIx++)
+    for(int vidIx = 0; vidIx < this->m_vidTextures.size(); vidIx++)
     {
-        if(this->vidTextures[vidIx].texInfoValid)
+        if(this->m_vidTextures[vidIx].texInfoValid)
         {
             // Render a quad with the video on it:
             glActiveTexture(GL_TEXTURE0_ARB);
-            glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[vidIx].texId);
+            glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->m_vidTextures[vidIx].texId);
             printOpenGLError(__FILE__, __LINE__);
 
-            if((this->vidTextures[vidIx].effect == VidShaderAlphaMask) && this->alphaTextureLoaded)
+            if((this->m_vidTextures[vidIx].effect == VidShaderAlphaMask) && this->m_alphaTextureLoaded)
             {
                 glEnable (GL_BLEND);
                 glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 glActiveTexture(GL_TEXTURE1_ARB);
-                glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->alphaTextureId);
+                glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->m_alphaTextureId);
             }
 
-            this->vidTextures[vidIx].shader->bind();
+            this->m_vidTextures[vidIx].shader->bind();
             setVidShaderVars(vidIx, false);
             printOpenGLError(__FILE__, __LINE__);
 
-            if(this->vidTextures[vidIx].effect == VidShaderColourHilightSwap)
+            if(this->m_vidTextures[vidIx].effect == VidShaderColourHilightSwap)
             {
-                this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapR", ColourComponentSwapR);
-                this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapG", ColourComponentSwapG);
-                this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapB", ColourComponentSwapB);
+                this->m_vidTextures[vidIx].shader->setUniformValue("u_componentSwapR", m_colourComponentSwapR);
+                this->m_vidTextures[vidIx].shader->setUniformValue("u_componentSwapG", m_colourComponentSwapG);
+                this->m_vidTextures[vidIx].shader->setUniformValue("u_componentSwapB", m_colourComponentSwapB);
             }
 
-            QGLShaderProgram *vidShader = this->vidTextures[vidIx].shader;
+            QGLShaderProgram *vidShader = this->m_vidTextures[vidIx].shader;
 
-            QMatrix4x4 vidQuadMatrix = this->modelViewMatrix;
+            QMatrix4x4 vidQuadMatrix = this->m_modelViewMatrix;
 
-            if(stackVidQuads)
+            if(m_stackVidQuads)
             {
                 vidQuadMatrix.translate(0.0, 0.0, 2.0);
                 vidQuadMatrix.translate(0.0, 0.0, 0.2*vidIx);
             }
             else
             {
-                vidQuadMatrix.rotate((360/this->vidTextures.size())*vidIx, 0.0, 1.0, 0.0);
+                vidQuadMatrix.rotate((360/this->m_vidTextures.size())*vidIx, 0.0, 1.0, 0.0);
                 vidQuadMatrix.translate(0.0, 0.0, 2.0);
             }
 
 
-            vidShader->setUniformValue("u_mvp_matrix", projectionMatrix * vidQuadMatrix);
+            vidShader->setUniformValue("u_mvp_matrix", m_projectionMatrix * vidQuadMatrix);
             vidShader->setUniformValue("u_mv_matrix", vidQuadMatrix);
 
             // Need to set these arrays up here as shader instances are shared between
             // all the videos:
             vidShader->enableAttributeArray("a_texCoord");
-            vidShader->setAttributeArray("a_texCoord", this->vidTextures[vidIx].triStripTexCoords);
+            vidShader->setAttributeArray("a_texCoord", this->m_vidTextures[vidIx].triStripTexCoords);
 
-            if(this->vidTextures[vidIx].effect == VidShaderAlphaMask)
+            if(this->m_vidTextures[vidIx].effect == VidShaderAlphaMask)
             {
                 vidShader->enableAttributeArray("a_alphaTexCoord");
-                vidShader->setAttributeArray("a_alphaTexCoord", this->vidTextures[vidIx].triStripAlphaTexCoords);
+                vidShader->setAttributeArray("a_alphaTexCoord", this->m_vidTextures[vidIx].triStripAlphaTexCoords);
             }
 
             vidShader->enableAttributeArray("a_vertex");
-            vidShader->setAttributeArray("a_vertex", this->vidTextures[vidIx].triStripVertices);
+            vidShader->setAttributeArray("a_vertex", this->m_vidTextures[vidIx].triStripVertices);
 
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
             vidShader->disableAttributeArray("a_vertex");
-            if(this->vidTextures[vidIx].effect == VidShaderAlphaMask)
+            if(this->m_vidTextures[vidIx].effect == VidShaderAlphaMask)
             {
                 vidShader->disableAttributeArray("a_alphaTexCoord");
             }
@@ -338,18 +338,18 @@ void GLWidget::paintEvent(QPaintEvent *event)
 
     painter.endNativePainting();
     QString framesPerSecond;
-    framesPerSecond.setNum(frames /(frameTime.elapsed() / 1000.0), 'f', 2);
+    framesPerSecond.setNum(m_frames /(m_frameTime.elapsed() / 1000.0), 'f', 2);
     painter.setPen(Qt::white);
     painter.drawText(20, 40, framesPerSecond + " fps");
     painter.end();
     swapBuffers();
 
-    if (!(frames % 100))
+    if (!(m_frames % 100))
     {
-        frameTime.start();
-        frames = 0;
+        m_frameTime.start();
+        m_frames = 0;
     }
-    ++frames;
+    ++m_frames;
 }
 
 void GLWidget::resizeGL(int wid, int ht)
@@ -359,129 +359,129 @@ void GLWidget::resizeGL(int wid, int ht)
 
     glViewport(0, 0, wid, ht);
 
-    this->projectionMatrix = QMatrix4x4();
-    this->projectionMatrix.frustum(-vp, vp, -vp / aspect, vp / aspect, 1.0, 50.0);
+    this->m_projectionMatrix = QMatrix4x4();
+    this->m_projectionMatrix.frustum(-vp, vp, -vp / aspect, vp / aspect, 1.0, 50.0);
 }
 
 void GLWidget::newFrame(int vidIx)
 {
-    if(this->vidPipelines[vidIx])
+    if(this->m_vidPipelines[vidIx])
     {
 #ifdef ENABLE_FRAME_COUNT_DEBUG
-        qDebug("GLWidget: vid %d frame %d", vidIx, this->vidTextures[vidIx].frameCount++);
+        qDebug("GLWidget: vid %d frame %d", vidIx, this->m_vidTextures[vidIx].frameCount++);
 #endif
 
-        Pipeline *pipeline = this->vidPipelines[vidIx];
+        Pipeline *pipeline = this->m_vidPipelines[vidIx];
 
 
         /* Vid frame pointer is initialized as null */
-        if(this->vidTextures[vidIx].buffer)
+        if(this->m_vidTextures[vidIx].buffer)
         {
-            pipeline->m_outgoingBufQueue.put(this->vidTextures[vidIx].buffer);
-            PIPELINE_DEBUG("GLWidget: vid %d pushed buffer %p to outgoing queue", vidIx, this->vidTextures[vidIx].buffer);
+            pipeline->m_outgoingBufQueue.put(this->m_vidTextures[vidIx].buffer);
+            PIPELINE_DEBUG("GLWidget: vid %d pushed buffer %p to outgoing queue", vidIx, this->m_vidTextures[vidIx].buffer);
         }
 
         void *newBuf = NULL;
         if(pipeline->m_incomingBufQueue.get(&newBuf) == true)
         {
-            this->vidTextures[vidIx].buffer = newBuf;
+            this->m_vidTextures[vidIx].buffer = newBuf;
         }
         else
         {
             return;
         }
 
-        PIPELINE_DEBUG("GLWidget: vid %d popped buffer %p from incoming queue", vidIx, this->vidTextures[vidIx].buffer);
+        PIPELINE_DEBUG("GLWidget: vid %d popped buffer %p from incoming queue", vidIx, this->m_vidTextures[vidIx].buffer);
 
         this->makeCurrent();
 
         // Load the gst buf into a texture
-        if(this->vidTextures[vidIx].texInfoValid == false)
+        if(this->m_vidTextures[vidIx].texInfoValid == false)
         {
             PIPELINE_DEBUG("GLWidget: Received first frame of vid %d", vidIx);
 
             // Try and keep this fairly portable to other media frameworks by
             // leaving info extraction within pipeline class
-            this->vidTextures[vidIx].width = pipeline->getWidth();
-            this->vidTextures[vidIx].height = pipeline->getHeight();
-            this->vidTextures[vidIx].colourFormat = pipeline->getColourFormat();
-            this->vidTextures[vidIx].texInfoValid = true;
+            this->m_vidTextures[vidIx].width = pipeline->getWidth();
+            this->m_vidTextures[vidIx].height = pipeline->getHeight();
+            this->m_vidTextures[vidIx].colourFormat = pipeline->getColourFormat();
+            this->m_vidTextures[vidIx].texInfoValid = true;
 
             setAppropriateVidShader(vidIx);
 
-            this->vidTextures[vidIx].shader->bind();
+            this->m_vidTextures[vidIx].shader->bind();
             printOpenGLError(__FILE__, __LINE__);
             // Setting shader variables here will have no effect as they are set on every render,
             // but do it to check for errors, so we don't need to check on every render
             // and program output doesn't go mad
             setVidShaderVars(vidIx, true);
 
-            GLfloat vidWidth = this->vidTextures[vidIx].width;
-            GLfloat vidHeight = this->vidTextures[vidIx].height;
+            GLfloat vidWidth = this->m_vidTextures[vidIx].width;
+            GLfloat vidHeight = this->m_vidTextures[vidIx].height;
 
-            this->vidTextures[vidIx].triStripTexCoords[0]      = QVector2D(vidWidth, 0.0f);
-            this->vidTextures[vidIx].triStripVertices[0]       = QVector2D(VIDTEXTURE_LEFT_X, VIDTEXTURE_TOP_Y);
+            this->m_vidTextures[vidIx].triStripTexCoords[0]      = QVector2D(vidWidth, 0.0f);
+            this->m_vidTextures[vidIx].triStripVertices[0]       = QVector2D(VIDTEXTURE_LEFT_X, VIDTEXTURE_TOP_Y);
 
-            this->vidTextures[vidIx].triStripTexCoords[1]      = QVector2D(0.0f, 0.0f);
-            this->vidTextures[vidIx].triStripVertices[1]       = QVector2D(VIDTEXTURE_RIGHT_X, VIDTEXTURE_TOP_Y);
+            this->m_vidTextures[vidIx].triStripTexCoords[1]      = QVector2D(0.0f, 0.0f);
+            this->m_vidTextures[vidIx].triStripVertices[1]       = QVector2D(VIDTEXTURE_RIGHT_X, VIDTEXTURE_TOP_Y);
 
-            this->vidTextures[vidIx].triStripTexCoords[2]      = QVector2D(vidWidth, vidHeight);
-            this->vidTextures[vidIx].triStripVertices[2]       = QVector2D(VIDTEXTURE_LEFT_X, VIDTEXTURE_BOT_Y);
+            this->m_vidTextures[vidIx].triStripTexCoords[2]      = QVector2D(vidWidth, vidHeight);
+            this->m_vidTextures[vidIx].triStripVertices[2]       = QVector2D(VIDTEXTURE_LEFT_X, VIDTEXTURE_BOT_Y);
 
-            this->vidTextures[vidIx].triStripTexCoords[3]      = QVector2D(0.0f, vidHeight);
-            this->vidTextures[vidIx].triStripVertices[3]       = QVector2D(VIDTEXTURE_RIGHT_X, VIDTEXTURE_BOT_Y);
+            this->m_vidTextures[vidIx].triStripTexCoords[3]      = QVector2D(0.0f, vidHeight);
+            this->m_vidTextures[vidIx].triStripVertices[3]       = QVector2D(VIDTEXTURE_RIGHT_X, VIDTEXTURE_BOT_Y);
         }
 
 
-        glBindTexture (GL_TEXTURE_RECTANGLE_ARB, this->vidTextures[vidIx].texId);
+        glBindTexture (GL_TEXTURE_RECTANGLE_ARB, this->m_vidTextures[vidIx].texId);
 
         glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-        switch(this->vidTextures[vidIx].colourFormat)
+        switch(this->m_vidTextures[vidIx].colourFormat)
         {
         case ColFmt_I420:
             glTexImage2D  (GL_TEXTURE_RECTANGLE_ARB, 0, GL_LUMINANCE,
-                           this->vidTextures[vidIx].width,
-                           1.5f*this->vidTextures[vidIx].height,
+                           this->m_vidTextures[vidIx].width,
+                           1.5f*this->m_vidTextures[vidIx].height,
                            0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                           PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer));
+                           PIPELINE_BUFFER_VID_DATA_START(this->m_vidTextures[vidIx].buffer));
 
 #ifdef ENABLE_YUV_WINDOW
-            if((vidIx == 0) && (yuvWindow->isVisible()))
+            if((vidIx == 0) && (m_yuvWindow->isVisible()))
             {
-                QImage yuvImage(PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer),
-                                this->vidTextures[vidIx].width,
-                                1.5f*this->vidTextures[vidIx].height,
+                QImage yuvImage(PIPELINE_BUFFER_VID_DATA_START(this->m_vidTextures[vidIx].buffer),
+                                this->m_vidTextures[vidIx].width,
+                                1.5f*this->m_vidTextures[vidIx].height,
                                 QImage::Format_Indexed8);
-                yuvImage.setColorTable(colourMap);
-                yuvWindow->imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
+                yuvImage.setColorTable(m_colourMap);
+                m_yuvWindow->m_imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
             }
 #endif
             break;
         case ColFmt_UYVY:
             glTexImage2D  (GL_TEXTURE_RECTANGLE_ARB, 0, GL_LUMINANCE,
-                           this->vidTextures[vidIx].width*2,
-                           this->vidTextures[vidIx].height,
+                           this->m_vidTextures[vidIx].width*2,
+                           this->m_vidTextures[vidIx].height,
                            0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                           PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer));
+                           PIPELINE_BUFFER_VID_DATA_START(this->m_vidTextures[vidIx].buffer));
 
 #ifdef ENABLE_YUV_WINDOW
-            if((vidIx == 0) && (yuvWindow->isVisible()))
+            if((vidIx == 0) && (m_yuvWindow->isVisible()))
             {
-                QImage yuvImage(PIPELINE_BUFFER_VID_DATA_START(this->vidTextures[vidIx].buffer),
-                                this->vidTextures[vidIx].width*2,
-                                this->vidTextures[vidIx].height,
+                QImage yuvImage(PIPELINE_BUFFER_VID_DATA_START(this->m_vidTextures[vidIx].buffer),
+                                this->m_vidTextures[vidIx].width*2,
+                                this->m_vidTextures[vidIx].height,
                                 QImage::Format_Indexed8);
-                yuvImage.setColorTable(colourMap);
-                yuvWindow->imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
+                yuvImage.setColorTable(m_colourMap);
+                m_yuvWindow->m_imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
             }
 #endif
             break;
         default:
-            qCritical("Decide how to load texture for colour format %d", this->vidTextures[vidIx].colourFormat);
+            qCritical("Decide how to load texture for colour format %d", this->m_vidTextures[vidIx].colourFormat);
             break;
         }
         printOpenGLError(__FILE__, __LINE__);
@@ -493,27 +493,27 @@ void GLWidget::newFrame(int vidIx)
 void GLWidget::pipelineFinished(int vidIx)
 {
 #ifdef ENABLE_FRAME_COUNT_DEBUG
-    this->vidTextures[vidIx].frameCount = 0;
+    this->m_vidTextures[vidIx].frameCount = 0;
 #endif
 
-    if(this->closing)
+    if(this->m_closing)
     {
-        delete(this->vidPipelines[vidIx]);
-        this->vidPipelines.replace(vidIx, NULL);
-        this->vidTextures[vidIx].texInfoValid = false;
+        delete(this->m_vidPipelines[vidIx]);
+        this->m_vidPipelines.replace(vidIx, NULL);
+        this->m_vidTextures[vidIx].texInfoValid = false;
 
         // Check if any gst threads left, if not close
         bool allFinished = true;
-        for(int i = 0; i < this->vidPipelines.size(); i++)
+        for(int i = 0; i < this->m_vidPipelines.size(); i++)
         {
-            if(this->vidPipelines[i] != NULL)
+            if(this->m_vidPipelines[i] != NULL)
             {
                 // Catch any threads which were already finished at quitting time
-                if(this->vidPipelines[i]->isFinished())
+                if(this->m_vidPipelines[i]->isFinished())
                 {
-                    delete(this->vidPipelines[vidIx]);
-                    this->vidPipelines.replace(vidIx, NULL);
-                    this->vidTextures[vidIx].texInfoValid = false;
+                    delete(this->m_vidPipelines[vidIx]);
+                    this->m_vidPipelines.replace(vidIx, NULL);
+                    this->m_vidTextures[vidIx].texInfoValid = false;
                 }
                 else
                 {
@@ -528,7 +528,7 @@ void GLWidget::pipelineFinished(int vidIx)
         }
     }
 #if 0
-    else if(this->vidPipelines[vidIx]->chooseNew())
+    else if(this->m_vidPipelines[vidIx]->chooseNew())
     {
         // Confirm that we have the new filename before we do anything else
         QString newFileName = QFileDialog::getOpenFileName(0, "Select a video file",
@@ -536,36 +536,36 @@ void GLWidget::pipelineFinished(int vidIx)
 
         if(newFileName.isNull() == false)
         {
-            delete(this->vidPipelines[vidIx]);
-            this->vidTextures[vidIx].texInfoValid = false;
+            delete(this->m_vidPipelines[vidIx]);
+            this->m_vidTextures[vidIx].texInfoValid = false;
 
-            this->videoLoc[vidIx] = newFileName;
-            this->vidPipelines[vidIx] = createPipeline(vidIx);
+            this->m_videoLoc[vidIx] = newFileName;
+            this->m_vidPipelines[vidIx] = createPipeline(vidIx);
 
-            QObject::connect(this->vidPipelines[vidIx], SIGNAL(finished(int)),
+            QObject::connect(this->m_vidPipelines[vidIx], SIGNAL(finished(int)),
                              this, SLOT(pipelineFinished(int)));
             QObject::connect(this, SIGNAL(closeRequested()),
-                             this->vidPipelines[vidIx], SLOT(stop()), Qt::QueuedConnection);
+                             this->m_vidPipelines[vidIx], SLOT(stop()), Qt::QueuedConnection);
 
-            this->vidPipelines[vidIx]->Configure();
-            this->vidPipelines[vidIx]->Start();
+            this->m_vidPipelines[vidIx]->Configure();
+            this->m_vidPipelines[vidIx]->Start();
         }
     }
 #endif
     else
     {
-        delete(this->vidPipelines[vidIx]);
-        this->vidTextures[vidIx].texInfoValid = false;
+        delete(this->m_vidPipelines[vidIx]);
+        this->m_vidTextures[vidIx].texInfoValid = false;
 
-        this->vidPipelines[vidIx] = createPipeline(vidIx);
+        this->m_vidPipelines[vidIx] = createPipeline(vidIx);
 
-        QObject::connect(this->vidPipelines[vidIx], SIGNAL(finished(int)),
+        QObject::connect(this->m_vidPipelines[vidIx], SIGNAL(finished(int)),
                          this, SLOT(pipelineFinished(int)));
         QObject::connect(this, SIGNAL(closeRequested()),
-                         this->vidPipelines[vidIx], SLOT(Stop()), Qt::QueuedConnection);
+                         this->m_vidPipelines[vidIx], SLOT(Stop()), Qt::QueuedConnection);
 
-        this->vidPipelines[vidIx]->Configure();
-        this->vidPipelines[vidIx]->Start();
+        this->m_vidPipelines[vidIx]->Configure();
+        this->m_vidPipelines[vidIx]->Start();
     }
 }
 
@@ -594,35 +594,35 @@ static int qNormalizeAngle(int angle)
 void GLWidget::animate()
 {
     /* Increment wrt inertia */
-    if (Rotate)
+    if (m_rotateOn)
     {
-        xRot = qNormalizeAngle(xRot + (8 * fYInertia));
-        yRot = qNormalizeAngle(yRot + (8 * fXInertia));
+        m_xRot = qNormalizeAngle(m_xRot + (8 * m_yInertia));
+        m_yRot = qNormalizeAngle(m_yRot + (8 * m_xInertia));
     }
 
     /* Colour swapping effect shader */
-    if(ColourSwapDirUpwards)
+    if(m_colourSwapDirUpwards)
     {
-        if((ColourComponentSwapB.z() < 0.1) || (ColourComponentSwapG.z() > 0.9))
+        if((m_colourComponentSwapB.z() < 0.1) || (m_colourComponentSwapG.z() > 0.9))
         {
-            ColourSwapDirUpwards = false;
+            m_colourSwapDirUpwards = false;
         }
         else
         {
-            ColourComponentSwapB.setZ(ColourComponentSwapB.z() - 0.01);
-            ColourComponentSwapG.setZ(ColourComponentSwapG.z() + 0.01);
+            m_colourComponentSwapB.setZ(m_colourComponentSwapB.z() - 0.01);
+            m_colourComponentSwapG.setZ(m_colourComponentSwapG.z() + 0.01);
         }
     }
     else
     {
-        if((ColourComponentSwapB.z() > 0.9) || (ColourComponentSwapG.z() < 0.1))
+        if((m_colourComponentSwapB.z() > 0.9) || (m_colourComponentSwapG.z() < 0.1))
         {
-            ColourSwapDirUpwards = true;
+            m_colourSwapDirUpwards = true;
         }
         else
         {
-            ColourComponentSwapB.setZ(ColourComponentSwapB.z() + 0.01);
-            ColourComponentSwapG.setZ(ColourComponentSwapG.z() - 0.01);
+            m_colourComponentSwapB.setZ(m_colourComponentSwapB.z() + 0.01);
+            m_colourComponentSwapG.setZ(m_colourComponentSwapG.z() - 0.01);
         }
     }
 
@@ -632,14 +632,14 @@ void GLWidget::animate()
 // Input events
 void GLWidget::cycleVidShaderSlot()
 {
-    int lastVidDrawn = this->vidTextures.size() - 1;
-    if (this->vidTextures[lastVidDrawn].effect >= VidShaderLast)
-        this->vidTextures[lastVidDrawn].effect = VidShaderFirst;
+    int lastVidDrawn = this->m_vidTextures.size() - 1;
+    if (this->m_vidTextures[lastVidDrawn].effect >= VidShaderLast)
+        this->m_vidTextures[lastVidDrawn].effect = VidShaderFirst;
     else
-        this->vidTextures[lastVidDrawn].effect = (VidShaderEffectType) ((int) this->vidTextures[lastVidDrawn].effect + 1);
+        this->m_vidTextures[lastVidDrawn].effect = (VidShaderEffectType) ((int) this->m_vidTextures[lastVidDrawn].effect + 1);
 
     setAppropriateVidShader(lastVidDrawn);
-    this->vidTextures[lastVidDrawn].shader->bind();
+    this->m_vidTextures[lastVidDrawn].shader->bind();
     printOpenGLError(__FILE__, __LINE__);
     // Setting shader variables here will have no effect as they are set on every render,
     // but do it to check for errors, so we don't need to check on every render
@@ -649,29 +649,29 @@ void GLWidget::cycleVidShaderSlot()
 
 void GLWidget::cycleModelShaderSlot()
 {
-    if (currentModelEffect >= ModelEffectLast)
-        currentModelEffect = ModelEffectFirst;
+    if (m_currentModelEffectIndex >= ModelEffectLast)
+        m_currentModelEffectIndex = ModelEffectFirst;
     else
-        currentModelEffect = (ModelEffectType) ((int) currentModelEffect + 1);
+        m_currentModelEffectIndex = (ModelEffectType) ((int) m_currentModelEffectIndex + 1);
 }
 
 void GLWidget::showYUVWindowSlot()
 {
-    yuvWindow->show();
+    m_yuvWindow->show();
 }
 
 void GLWidget::loadVideoSlot()
 {
-    int lastVidDrawn = this->vidTextures.size() - 1;
+    int lastVidDrawn = this->m_vidTextures.size() - 1;
 
     QString newFileName = QFileDialog::getOpenFileName(0, "Select a video file",
-                                                         dataFilesDir + "videos/", "Videos (*.avi *.mkv *.ogg *.asf *.mov);;All (*.*)");
+                                                         m_dataFilesDir + "videos/", "Videos (*.avi *.mkv *.ogg *.asf *.mov);;All (*.*)");
     if(newFileName.isNull() == false)
     {
-        this->videoLoc[lastVidDrawn] = newFileName;
+        this->m_videoLoc[lastVidDrawn] = newFileName;
 
-        //this->vidPipelines[lastVidDrawn]->setChooseNewOnFinished();
-        this->vidPipelines[lastVidDrawn]->Stop();
+        //this->m_vidPipelines[lastVidDrawn]->setChooseNewOnFinished();
+        this->m_vidPipelines[lastVidDrawn]->Stop();
     }
 }
 
@@ -679,14 +679,14 @@ void GLWidget::loadModelSlot()
 {
     // Load a Wavefront OBJ model file. Get the filename before doing anything else
     QString objFileName = QFileDialog::getOpenFileName(0, "Select a Wavefront OBJ file",
-                                                          dataFilesDir + "models/", "Wavefront OBJ (*.obj)");
+                                                          m_dataFilesDir + "models/", "Wavefront OBJ (*.obj)");
     if(objFileName.isNull() == false)
     {
-        if(model->Load(objFileName) != 0)
+        if(m_model->Load(objFileName) != 0)
         {
             qCritical() << "Couldn't load obj model file " << objFileName;
         }
-        model->SetScale(MODEL_BOUNDARY_SIZE);
+        m_model->SetScale(MODEL_BOUNDARY_SIZE);
     }
 }
 
@@ -694,83 +694,83 @@ void GLWidget::loadAlphaSlot()
 {
     // Load an alpha mask texture. Get the filename before doing anything else
     QString alphaTexFileName = QFileDialog::getOpenFileName(0, "Select an image file",
-                                                            dataFilesDir + "alphamasks/", "Pictures (*.bmp *.jpg *.jpeg *.gif);;All (*.*)");
+                                                            m_dataFilesDir + "alphamasks/", "Pictures (*.bmp *.jpg *.jpeg *.gif);;All (*.*)");
     if(alphaTexFileName.isNull() == false)
     {
         QImage alphaTexImage(alphaTexFileName);
         if(alphaTexImage.isNull() == false)
         {
             // Ok, a new image is loaded
-            if(alphaTextureLoaded)
+            if(m_alphaTextureLoaded)
             {
                 // Delete the old texture
-                alphaTextureLoaded = false;
-                deleteTexture(alphaTextureId);
+                m_alphaTextureLoaded = false;
+                deleteTexture(m_alphaTextureId);
             }
 
             // Bind new image to texture
-            alphaTextureId = bindTexture(alphaTexImage.mirrored(true, true), GL_TEXTURE_RECTANGLE_ARB);
-            alphaTexWidth = alphaTexImage.width();
-            alphaTexHeight = alphaTexImage.height();
+            m_alphaTextureId = bindTexture(alphaTexImage.mirrored(true, true), GL_TEXTURE_RECTANGLE_ARB);
+            m_alphaTexWidth = alphaTexImage.width();
+            m_alphaTexHeight = alphaTexImage.height();
             // Update alpha tex co-ords in shader in case it is active:
-            setVidShaderVars((this->vidTextures.size() - 1), true);
-            alphaTextureLoaded = true;
+            setVidShaderVars((this->m_vidTextures.size() - 1), true);
+            m_alphaTextureLoaded = true;
         }
     }
 }
 
 void GLWidget::rotateToggleSlot(bool toggleState)
 {
-    Rotate = toggleState;
+    m_rotateOn = toggleState;
 
-    if (!Rotate)
+    if (!m_rotateOn)
     {
-        fXInertiaOld = fXInertia;
-        fYInertiaOld = fYInertia;
+        m_xInertiaOld = m_xInertia;
+        m_yInertiaOld = m_yInertia;
     }
     else
     {
-        fXInertia = fXInertiaOld;
-        fYInertia = fYInertiaOld;
+        m_xInertia = m_xInertiaOld;
+        m_yInertia = m_yInertiaOld;
 
         // To prevent confusion, force some rotation
-        if ((fXInertia == 0.0) && (fYInertia == 0.0))
-            fXInertia = -0.5;
+        if ((m_xInertia == 0.0) && (m_yInertia == 0.0))
+            m_xInertia = -0.5;
     }
 }
 
 void GLWidget::stackVidsToggleSlot(int toggleState)
 {
     if(toggleState == Qt::Checked)
-        stackVidQuads = true;
+        m_stackVidQuads = true;
     else
-        stackVidQuads = false;
+        m_stackVidQuads = false;
 }
 
 void GLWidget::cycleBackgroundSlot()
 {
-    switch( clearColor++ )
+    switch( m_clearColorIndex++ )
     {
         case 0:  qglClearColor(QColor(Qt::black));
              break;
         case 1:  qglClearColor(QColor::fromRgbF(0.2f, 0.2f, 0.3f, 1.0f));
              break;
         default: qglClearColor(QColor::fromRgbF(0.7f, 0.7f, 0.7f, 1.0f));
-             clearColor = 0;
+             m_clearColorIndex = 0;
              break;
     }
 }
 
 void GLWidget::resetPosSlot()
 {
-    xRot = 0;
-    yRot = 35;
-    zRot = 0;
-    xLastIncr = 0;
-    yLastIncr = 0;
-    fXInertia = -0.5;
-    fYInertia = 0;
-    fScale    = 1.0;
+    m_xRot = 0;
+    m_yRot = 35;
+    m_zRot = 0;
+    m_xLastIncr = 0;
+    m_yLastIncr = 0;
+    m_xInertia = -0.5;
+    m_yInertia = 0;
+    m_scaleValue    = 1.0;
 }
 
 void GLWidget::exitSlot()
@@ -782,15 +782,15 @@ void GLWidget::exitSlot()
 
 void GLWidget::mousePressEvent(QMouseEvent *event)
 {
-    lastPos = event->pos();
+    m_lastPos = event->pos();
 
     if (event->button() == Qt::LeftButton)
     {
-        fXInertia = 0;
-        fYInertia = 0;
+        m_xInertia = 0;
+        m_yInertia = 0;
 
-        xLastIncr = 0;
-        yLastIncr = 0;
+        m_xLastIncr = 0;
+        m_yLastIncr = 0;
     }
 }
 
@@ -799,53 +799,53 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *event)
     if (event->button() == Qt::LeftButton)
     {
         // Left button released
-        lastPos.setX(-1);
-        lastPos.setY(-1);
+        m_lastPos.setX(-1);
+        m_lastPos.setY(-1);
 
-        if (xLastIncr > INERTIA_THRESHOLD)
-          fXInertia = (xLastIncr - INERTIA_THRESHOLD)*INERTIA_FACTOR;
+        if (m_xLastIncr > INERTIA_THRESHOLD)
+          m_xInertia = (m_xLastIncr - INERTIA_THRESHOLD)*INERTIA_FACTOR;
 
-        if (-xLastIncr > INERTIA_THRESHOLD)
-          fXInertia = (xLastIncr + INERTIA_THRESHOLD)*INERTIA_FACTOR;
+        if (-m_xLastIncr > INERTIA_THRESHOLD)
+          m_xInertia = (m_xLastIncr + INERTIA_THRESHOLD)*INERTIA_FACTOR;
 
-        if (yLastIncr > INERTIA_THRESHOLD)
-          fYInertia = (yLastIncr - INERTIA_THRESHOLD)*INERTIA_FACTOR;
+        if (m_yLastIncr > INERTIA_THRESHOLD)
+          m_yInertia = (m_yLastIncr - INERTIA_THRESHOLD)*INERTIA_FACTOR;
 
-        if (-yLastIncr > INERTIA_THRESHOLD)
-          fYInertia = (yLastIncr + INERTIA_THRESHOLD)*INERTIA_FACTOR;
+        if (-m_yLastIncr > INERTIA_THRESHOLD)
+          m_yInertia = (m_yLastIncr + INERTIA_THRESHOLD)*INERTIA_FACTOR;
 
     }
 }
 
 void GLWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    if((lastPos.x() != -1) && (lastPos.y() != -1))
+    if((m_lastPos.x() != -1) && (m_lastPos.y() != -1))
     {
-        xLastIncr = event->x() - lastPos.x();
-        yLastIncr = event->y() - lastPos.y();
+        m_xLastIncr = event->x() - m_lastPos.x();
+        m_yLastIncr = event->y() - m_lastPos.y();
 
         if ((event->modifiers() & Qt::ControlModifier)
             || (event->buttons() & Qt::RightButton))
         {
-           if (lastPos.x() != -1)
+           if (m_lastPos.x() != -1)
            {
-               zRot = qNormalizeAngle(zRot + (8 * xLastIncr));
-               fScale += (yLastIncr)*SCALE_FACTOR;
+               m_zRot = qNormalizeAngle(m_zRot + (8 * m_xLastIncr));
+               m_scaleValue += (m_yLastIncr)*SCALE_FACTOR;
                update();
            }
         }
         else
         {
-           if (lastPos.x() != -1)
+           if (m_lastPos.x() != -1)
            {
-               xRot = qNormalizeAngle(xRot + (8 * yLastIncr));
-               yRot = qNormalizeAngle(yRot + (8 * xLastIncr));
+               m_xRot = qNormalizeAngle(m_xRot + (8 * m_yLastIncr));
+               m_yRot = qNormalizeAngle(m_yRot + (8 * m_xLastIncr));
                update();
            }
         }
     }
 
-    lastPos = event->pos();
+    m_lastPos = event->pos();
 }
 
 void GLWidget::keyPressEvent(QKeyEvent *e)
@@ -899,34 +899,34 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
             break;
         case Qt::Key_P:
             // Decouple bool used within class from Qt check box state enum values
-            stackVidsToggleSlot(stackVidQuads ? Qt::Unchecked : Qt::Checked);
-            emit stackVidsStateChanged(stackVidQuads ? Qt::Checked : Qt::Unchecked);
+            stackVidsToggleSlot(m_stackVidQuads ? Qt::Unchecked : Qt::Checked);
+            emit stackVidsStateChanged(m_stackVidQuads ? Qt::Checked : Qt::Unchecked);
             break;
 
         case Qt::Key_Space:
-            rotateToggleSlot(Rotate ? false : true); //Qt::Unchecked : Qt::Checked)
-            emit rotateStateChanged(Rotate);// ? Qt::Checked : Qt::Unchecked);
+            rotateToggleSlot(m_rotateOn ? false : true); //Qt::Unchecked : Qt::Checked)
+            emit rotateStateChanged(m_rotateOn);// ? Qt::Checked : Qt::Unchecked);
             break;
         case Qt::Key_Plus:
-            fScale += SCALE_INCREMENT;
+            m_scaleValue += SCALE_INCREMENT;
             break;
         case Qt::Key_Minus:
-            fScale -= SCALE_INCREMENT;
+            m_scaleValue -= SCALE_INCREMENT;
             break;
         case Qt::Key_Home:
             resetPosSlot();
             break;
         case Qt::Key_Left:
-           yRot -= 8;
+           m_yRot -= 8;
             break;
         case Qt::Key_Right:
-           yRot += 8;
+           m_yRot += 8;
             break;
         case Qt::Key_Up:
-           xRot -= 8;
+           m_xRot -= 8;
             break;
         case Qt::Key_Down:
-           xRot += 8;
+           m_xRot += 8;
             break;
 
 #ifdef ENABLE_YUV_WINDOW
@@ -943,16 +943,16 @@ void GLWidget::keyPressEvent(QKeyEvent *e)
 
 void GLWidget::closeEvent(QCloseEvent* event)
 {
-    if(this->closing == false)
+    if(this->m_closing == false)
     {
-        this->closing = true;
+        this->m_closing = true;
         emit closeRequested();
 
         // Just in case, check now if any gst threads still exist, if not, close application now
         bool allFinished = true;
-        for(int i = 0; i < this->vidPipelines.size(); i++)
+        for(int i = 0; i < this->m_vidPipelines.size(); i++)
         {
-            if(this->vidPipelines[i] != NULL)
+            if(this->m_vidPipelines[i] != NULL)
             {
                 allFinished = false;
                 break;
@@ -966,7 +966,7 @@ void GLWidget::closeEvent(QCloseEvent* event)
     }
     else
     {
-        // This is where we're all finished and really are closing now.
+        // This is where we're all finished and really are m_closing now.
         // At the mo, tell parent to close too.
         QWidget* _parent = dynamic_cast<QWidget*>(parent());
         if(_parent)
@@ -977,57 +977,57 @@ void GLWidget::closeEvent(QCloseEvent* event)
 // Shader management
 void GLWidget::setAppropriateVidShader(int vidIx)
 {
-    switch(this->vidTextures[vidIx].colourFormat)
+    switch(this->m_vidTextures[vidIx].colourFormat)
     {
     case ColFmt_I420:
-        switch(this->vidTextures[vidIx].effect)
+        switch(this->m_vidTextures[vidIx].effect)
         {
         case VidShaderNoEffect:
-            this->vidTextures[vidIx].shader = &I420NoEffect;
+            this->m_vidTextures[vidIx].shader = &m_I420NoEffect;
             break;
         case VidShaderNoEffectNormalisedTexCoords:
-            this->vidTextures[vidIx].shader = &I420NoEffectNormalised;
+            this->m_vidTextures[vidIx].shader = &m_I420NoEffectNormalised;
             break;
         case VidShaderLitNormalisedTexCoords:
-            this->vidTextures[vidIx].shader = &I420LitNormalised;
+            this->m_vidTextures[vidIx].shader = &m_I420LitNormalised;
             break;
         case VidShaderColourHilight:
-            this->vidTextures[vidIx].shader = &I420ColourHilight;
+            this->m_vidTextures[vidIx].shader = &m_I420ColourHilight;
             break;
         case VidShaderColourHilightSwap:
-            this->vidTextures[vidIx].shader = &I420ColourHilightSwap;
+            this->m_vidTextures[vidIx].shader = &m_I420ColourHilightSwap;
             break;
         case VidShaderAlphaMask:
-            this->vidTextures[vidIx].shader = &I420AlphaMask;
+            this->m_vidTextures[vidIx].shader = &m_I420AlphaMask;
             break;
         }
         break;
     case ColFmt_UYVY:
-        switch(this->vidTextures[vidIx].effect)
+        switch(this->m_vidTextures[vidIx].effect)
         {
         case VidShaderNoEffect:
-            this->vidTextures[vidIx].shader = &UYVYNoEffect;
+            this->m_vidTextures[vidIx].shader = &m_UYVYNoEffect;
             break;
         case VidShaderNoEffectNormalisedTexCoords:
-            this->vidTextures[vidIx].shader = &UYVYNoEffectNormalised;
+            this->m_vidTextures[vidIx].shader = &m_UYVYNoEffectNormalised;
             break;
         case VidShaderLitNormalisedTexCoords:
-            this->vidTextures[vidIx].shader = &UYVYLitNormalised;
+            this->m_vidTextures[vidIx].shader = &m_UYVYLitNormalised;
             break;
         case VidShaderColourHilight:
-            this->vidTextures[vidIx].shader = &UYVYColourHilight;
+            this->m_vidTextures[vidIx].shader = &m_UYVYColourHilight;
             break;
         case VidShaderColourHilightSwap:
-            this->vidTextures[vidIx].shader = &UYVYColourHilightSwap;
+            this->m_vidTextures[vidIx].shader = &m_UYVYColourHilightSwap;
             break;
         case VidShaderAlphaMask:
-            this->vidTextures[vidIx].shader = &UYVYAlphaMask;
+            this->m_vidTextures[vidIx].shader = &m_UYVYAlphaMask;
             break;
         }
         break;
 
     default:
-        qCritical ("Haven't implemented a shader for colour format %d yet", this->vidTextures[vidIx].colourFormat);
+        qCritical ("Haven't implemented a shader for colour format %d yet", this->m_vidTextures[vidIx].colourFormat);
         break;
     }
 }
@@ -1038,66 +1038,66 @@ void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
 {
     // TODO: move common vars out of switch
 
-    switch(this->vidTextures[vidIx].effect)
+    switch(this->m_vidTextures[vidIx].effect)
     {
     case VidShaderNoEffect:
     case VidShaderNoEffectNormalisedTexCoords:
         // Temp:
         printOpenGLError(__FILE__, __LINE__);
 
-        this->vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
         // Temp:
         printOpenGLError(__FILE__, __LINE__);
-        this->vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->vidTextures[vidIx].height);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->m_vidTextures[vidIx].height);
         // Temp:
         printOpenGLError(__FILE__, __LINE__);
-        this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->m_vidTextures[vidIx].width);
 
         if(printErrors) printOpenGLError(__FILE__, __LINE__);
         break;
 
     case VidShaderLitNormalisedTexCoords:
-        this->vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
-        this->vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->vidTextures[vidIx].height);
-        this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->m_vidTextures[vidIx].height);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->m_vidTextures[vidIx].width);
 
-        this->vidTextures[vidIx].shader->setUniformValue("u_lightPosition", QVector3D(0.0, 0.0, 4.0));
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_lightPosition", QVector3D(0.0, 0.0, 4.0));
 
         if(printErrors) printOpenGLError(__FILE__, __LINE__);
         break;
 
     case VidShaderColourHilight:
-        this->vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
-        this->vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->vidTextures[vidIx].height);
-        this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
-        this->vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMin", ColourHilightRangeMin);
-        this->vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMax", ColourHilightRangeMax);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->m_vidTextures[vidIx].height);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->m_vidTextures[vidIx].width);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMin", m_colourHilightRangeMin);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMax", m_colourHilightRangeMax);
         if(printErrors) printOpenGLError(__FILE__, __LINE__);
         break;
 
     case VidShaderColourHilightSwap:
-        this->vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
-        this->vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->vidTextures[vidIx].height);
-        this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
-        this->vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMin", ColourHilightRangeMin);
-        this->vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMax", ColourHilightRangeMax);
-        this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapR", ColourComponentSwapR);
-        this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapG", ColourComponentSwapG);
-        this->vidTextures[vidIx].shader->setUniformValue("u_componentSwapB", ColourComponentSwapB);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->m_vidTextures[vidIx].height);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->m_vidTextures[vidIx].width);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMin", m_colourHilightRangeMin);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_colrToDisplayMax", m_colourHilightRangeMax);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_componentSwapR", m_colourComponentSwapR);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_componentSwapG", m_colourComponentSwapG);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_componentSwapB", m_colourComponentSwapB);
         if(printErrors) printOpenGLError(__FILE__, __LINE__);
         break;
 
     case VidShaderAlphaMask:
-        this->vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
-        this->vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->vidTextures[vidIx].height);
-        this->vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->vidTextures[vidIx].width);
-        this->vidTextures[vidIx].shader->setUniformValue("u_alphaTexture", 1); // texture unit index
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->m_vidTextures[vidIx].height);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->m_vidTextures[vidIx].width);
+        this->m_vidTextures[vidIx].shader->setUniformValue("u_alphaTexture", 1); // texture unit index
         if(printErrors) printOpenGLError(__FILE__, __LINE__);
 
-        this->vidTextures[vidIx].triStripAlphaTexCoords[0] = QVector2D(alphaTexWidth, 0.0f);
-        this->vidTextures[vidIx].triStripAlphaTexCoords[1] = QVector2D(0.0f, 0.0f);
-        this->vidTextures[vidIx].triStripAlphaTexCoords[2] = QVector2D(alphaTexWidth, alphaTexHeight);
-        this->vidTextures[vidIx].triStripAlphaTexCoords[3] = QVector2D(0.0f, alphaTexHeight);
+        this->m_vidTextures[vidIx].triStripAlphaTexCoords[0] = QVector2D(m_alphaTexWidth, 0.0f);
+        this->m_vidTextures[vidIx].triStripAlphaTexCoords[1] = QVector2D(0.0f, 0.0f);
+        this->m_vidTextures[vidIx].triStripAlphaTexCoords[2] = QVector2D(m_alphaTexWidth, m_alphaTexHeight);
+        this->m_vidTextures[vidIx].triStripAlphaTexCoords[3] = QVector2D(0.0f, m_alphaTexHeight);
         break;
 
     default:
@@ -1108,7 +1108,7 @@ void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
 
 int GLWidget::loadShaderFile(QString fileName, QString &shaderSource)
 {
-    fileName = dataFilesDir + fileName;
+    fileName = m_dataFilesDir + fileName;
 
     shaderSource.clear();
     QFile file(fileName);

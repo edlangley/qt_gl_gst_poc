@@ -11,10 +11,7 @@ class YuvDebugWindow : public QDialog
     Q_OBJECT
 public:
     explicit YuvDebugWindow(QWidget *parent = 0);
-
-    QScrollArea *scrollArea;
-    QLabel *imageLabel;
-    //QImage yuvImage;
+    QLabel *m_imageLabel;
     
 signals:
     

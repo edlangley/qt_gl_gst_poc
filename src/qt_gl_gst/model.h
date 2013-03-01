@@ -15,11 +15,11 @@
 class ModelMesh
 {
 public:
-    QVector<QVector3D> triangleVertices;
-    bool hasNormals;
-    QVector<QVector3D> triangleNormals;
-    bool hasTexcoords;
-    QVector<QVector2D> triangleTexcoords;
+    QVector<QVector3D> m_triangleVertices;
+    bool m_hasNormals;
+    QVector<QVector3D> m_triangleNormals;
+    bool m_hasTexcoords;
+    QVector<QVector2D> m_triangleTexcoords;
 
     // Could add more QVectors here for points, lines, polys.
 
@@ -34,9 +34,9 @@ public slots:
 class ModelNode
 {
 public:
-    QVector<ModelMesh> meshes;
-    QMatrix4x4 transformMatrix;
-    //struct aiMatrix4x4 aitransformMatrix;
+    QVector<ModelMesh> m_meshes;
+    QMatrix4x4 m_transformMatrix;
+    //struct aiMatrix4x4 aim_transformMatrix;
 signals:
 
 public slots:
@@ -61,12 +61,12 @@ private:
             struct aiMatrix4x4* trafo);
     void get_bounding_box (struct aiVector3D* min, struct aiVector3D* max);
 
-    const struct aiScene* scene;
-    QVector<ModelNode> nodes;
-    struct aiVector3D scene_center;
-    struct aiVector3D scene_min;
-    struct aiVector3D scene_max;
-    qreal scaleFactor;
+    const struct aiScene* m_scene;
+    QVector<ModelNode> m_nodes;
+    struct aiVector3D m_sceneCenter;
+    struct aiVector3D m_sceneMin;
+    struct aiVector3D m_sceneMax;
+    qreal m_scaleFactor;
 
 };
 

@@ -13,39 +13,39 @@ template<class T>
 class AsyncQueue
 {
 public:
-    AsyncQueue() : waitingReaders(0) {}
+    AsyncQueue() : m_waitingReaders(0) {}
 
     int size()
     {
-        QMutexLocker locker(&mutex);
-        return this->buffer.size();
+        QMutexLocker locker(&m_mutex);
+        return this->m_buffer.size();
     }
 
     void put(const T& item)
     {
-        QMutexLocker locker(&mutex);
-        this->buffer.push_back(item);
-        if(this->waitingReaders)
-            this->bufferIsNotEmpty.wakeOne();
+        QMutexLocker locker(&m_mutex);
+        this->m_buffer.push_back(item);
+        if(this->m_waitingReaders)
+            this->m_bufferIsNotEmpty.wakeOne();
     }
 
     bool get(T *itemDestPtr, unsigned long time_ms = 0)
     {
-        QMutexLocker locker(&mutex);
+        QMutexLocker locker(&m_mutex);
         bool itemInQueue = false;
 
-        itemInQueue = (this->buffer.size()) ? true : false;
+        itemInQueue = (this->m_buffer.size()) ? true : false;
         if(!itemInQueue && time_ms)
         {
-            ++(this->waitingReaders);
-            itemInQueue = this->bufferIsNotEmpty.wait(&mutex, time_ms);
-            --(this->waitingReaders);
+            ++(this->m_waitingReaders);
+            itemInQueue = this->m_bufferIsNotEmpty.wait(&m_mutex, time_ms);
+            --(this->m_waitingReaders);
         }
 
         if(itemInQueue)
         {
-            T item = this->buffer.front();
-            this->buffer.pop_front();
+            T item = this->m_buffer.front();
+            this->m_buffer.pop_front();
             *itemDestPtr = item;
             return true;
         }
@@ -57,10 +57,10 @@ public:
 
 private:
     typedef QList<T> Container;
-    QMutex mutex;
-    QWaitCondition bufferIsNotEmpty;
-    Container buffer;
-    short waitingReaders;
+    QMutex m_mutex;
+    QWaitCondition m_bufferIsNotEmpty;
+    Container m_buffer;
+    short m_waitingReaders;
 };
 
 

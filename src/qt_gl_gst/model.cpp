@@ -6,7 +6,7 @@
 
 Model::Model()
 {
-    scene = NULL;
+    m_scene = NULL;
 
     struct aiLogStream stream = aiGetPredefinedLogStream(aiDefaultLogStream_STDOUT, NULL);
     aiAttachLogStream(&stream);
@@ -18,12 +18,12 @@ Model::Model()
 
 Model::~Model()
 {
-    nodes.resize(0);
+    m_nodes.resize(0);
 
-    if(scene)
+    if(m_scene)
     {
-        aiReleaseImport(scene);
-        scene = NULL;
+        aiReleaseImport(m_scene);
+        m_scene = NULL;
     }
 
     aiDetachAllLogStreams();
@@ -31,19 +31,19 @@ Model::~Model()
 
 void Model::aiNodesToVertexArrays()
 {
-    /* Depth first traverse node tree and place nodes in flat QList,
+    /* Depth first traverse node tree and place m_nodes in flat QList,
        then work on each node in QList to create usable arrays.
 
-       Each node in tree has meshes, each mesh has faces, each face has indices
+       Each node in tree has m_meshes, each mesh has faces, each face has indices
        one indice is set of co-ordinates/tex co-ords/colour/normal for one point (in a polygon say)
 
        Transformation is per node,
        Texture/material is per mesh, so we want 1 set of arrays for each mesh
 
        Get all the points out and put them in:
-       QVector of nodes
+       QVector of m_nodes
            Transformation matrix ptr
-           QVector of meshes
+           QVector of m_meshes
                texid
                vertices: QVector of QVector3D
                tex co-ords: QVector of QVector3D
@@ -54,12 +54,12 @@ void Model::aiNodesToVertexArrays()
     */
 
     QList<struct aiNode*> flatNodePtrList;
-    struct aiNode* currentNode = scene->mRootNode;
+    struct aiNode* currentNode = m_scene->mRootNode;
     flatNodePtrList.prepend(currentNode);
 
     while(flatNodePtrList.size())
     {
-        // Store children nodes to process next, removing the
+        // Store children m_nodes to process next, removing the
         // current (parent) node from the front of the list:
         currentNode = flatNodePtrList.takeFirst();
         for(int childNodeIx = currentNode->mNumChildren-1; childNodeIx >= 0; --childNodeIx)
@@ -70,7 +70,7 @@ void Model::aiNodesToVertexArrays()
         // Process the current node:
         ModelNode newModelNode;
 
-        newModelNode.transformMatrix = QMatrix4x4((qreal)currentNode->mTransformation.a1,
+        newModelNode.m_transformMatrix = QMatrix4x4((qreal)currentNode->mTransformation.a1,
                                                   (qreal)currentNode->mTransformation.a2,
                                                   (qreal)currentNode->mTransformation.a3,
                                                   (qreal)currentNode->mTransformation.a4,
@@ -90,14 +90,14 @@ void Model::aiNodesToVertexArrays()
 
         for(unsigned int meshIx = 0; meshIx < currentNode->mNumMeshes; ++meshIx)
         {
-            const struct aiMesh* currentMesh = scene->mMeshes[currentNode->mMeshes[meshIx]];
+            const struct aiMesh* currentMesh = m_scene->mMeshes[currentNode->mMeshes[meshIx]];
 
             ModelMesh newModelMesh;
 
             // TODO: Grab texture info/load image file here....
 
-            newModelMesh.hasNormals = currentMesh->HasNormals();
-            newModelMesh.hasTexcoords = currentMesh->HasTextureCoords(0);
+            newModelMesh.m_hasNormals = currentMesh->HasNormals();
+            newModelMesh.m_hasTexcoords = currentMesh->HasTextureCoords(0);
 
             for(unsigned int faceIx = 0; faceIx < currentMesh->mNumFaces; ++faceIx)
             {
@@ -114,46 +114,46 @@ void Model::aiNodesToVertexArrays()
                     int vertexIndex = currentFace->mIndices[i];
 
                     QVector3D vert(currentMesh->mVertices[vertexIndex].x, currentMesh->mVertices[vertexIndex].y, currentMesh->mVertices[vertexIndex].z);
-                    newModelMesh.triangleVertices.append(vert);
+                    newModelMesh.m_triangleVertices.append(vert);
 
-                    if(newModelMesh.hasNormals)
+                    if(newModelMesh.m_hasNormals)
                     {
                         QVector3D norm(currentMesh->mNormals[vertexIndex].x, currentMesh->mNormals[vertexIndex].y, currentMesh->mNormals[vertexIndex].z);
-                        newModelMesh.triangleNormals.append(norm);
+                        newModelMesh.m_triangleNormals.append(norm);
                     }
 
-                    if(newModelMesh.hasTexcoords)
+                    if(newModelMesh.m_hasTexcoords)
                     {
                         QVector2D tex(currentMesh->mTextureCoords[0][vertexIndex].x, 1 - currentMesh->mTextureCoords[0][vertexIndex].y);
-                        newModelMesh.triangleTexcoords.append(tex);
+                        newModelMesh.m_triangleTexcoords.append(tex);
                     }
 
                 }
             }
 
-            newModelNode.meshes.append(newModelMesh);
+            newModelNode.m_meshes.append(newModelMesh);
         }
 
-        nodes.append(newModelNode);
+        m_nodes.append(newModelNode);
     }
 }
 
 
 int Model::Load(QString fileName)
 {
-    if(scene)
+    if(m_scene)
     {
         // Clear extracted node data
-        nodes.resize(0);
+        m_nodes.resize(0);
 
-        aiReleaseImport(scene);
-        scene = NULL;
+        aiReleaseImport(m_scene);
+        m_scene = NULL;
     }
 
     // Load model
-    scene = aiImportFile(fileName.toAscii().constData(), aiProcessPreset_TargetRealtime_Quality);
+    m_scene = aiImportFile(fileName.toAscii().constData(), aiProcessPreset_TargetRealtime_Quality);
 
-    if (!scene)
+    if (!m_scene)
     {
         qCritical() << "Couldn't load obj model file " << fileName;
         return -1;
@@ -163,76 +163,76 @@ int Model::Load(QString fileName)
     aiNodesToVertexArrays();
 
     // Get the offset to center the model about the origin when drawing later
-    get_bounding_box(&scene_min,&scene_max);
-    scene_center.x = (scene_min.x + scene_max.x) / 2.0f;
-    scene_center.y = (scene_min.y + scene_max.y) / 2.0f;
-    scene_center.z = (scene_min.z + scene_max.z) / 2.0f;
+    get_bounding_box(&m_sceneMin,&m_sceneMax);
+    m_sceneCenter.x = (m_sceneMin.x + m_sceneMax.x) / 2.0f;
+    m_sceneCenter.y = (m_sceneMin.y + m_sceneMax.y) / 2.0f;
+    m_sceneCenter.z = (m_sceneMin.z + m_sceneMax.z) / 2.0f;
 
     // Sensible default
-    scaleFactor = 1.0;
+    m_scaleFactor = 1.0;
 
     return 0;
 }
 
 void Model::SetScale(qreal boundarySize)
 {
-    if (!scene)
+    if (!m_scene)
     {
         qCritical() << "Model file not loaded yet";
         return;
     }
 
-    float longestSide = scene_max.x-scene_min.x;
-    longestSide = qMax(scene_max.y - scene_min.y, longestSide);
-    longestSide = qMax(scene_max.z - scene_min.z, longestSide);
+    float longestSide = m_sceneMax.x-m_sceneMin.x;
+    longestSide = qMax(m_sceneMax.y - m_sceneMin.y, longestSide);
+    longestSide = qMax(m_sceneMax.z - m_sceneMin.z, longestSide);
 
-    scaleFactor = boundarySize / (qreal)longestSide;
+    m_scaleFactor = boundarySize / (qreal)longestSide;
 }
 
 void Model::Draw(QMatrix4x4 modelViewMatrix, QMatrix4x4 projectionMatrix, QGLShaderProgram *shaderProg, bool useModelTextures)
 {
-    if (!scene)
+    if (!m_scene)
     {
         qCritical() << "Model file not loaded yet";
         return;
     }
 
     // Center and scale the model
-    modelViewMatrix.scale(scaleFactor);
-    modelViewMatrix.translate(-scene_center.x, -scene_center.y, -scene_center.z);
+    modelViewMatrix.scale(m_scaleFactor);
+    modelViewMatrix.translate(-m_sceneCenter.x, -m_sceneCenter.y, -m_sceneCenter.z);
 
-    foreach(ModelNode node, nodes)
+    foreach(ModelNode node, m_nodes)
     {
-        QMatrix4x4 nodeModelViewMatrix = modelViewMatrix * node.transformMatrix;
+        QMatrix4x4 nodeModelViewMatrix = modelViewMatrix * node.m_transformMatrix;
 
         // Load modelview projection matrix into shader. The projection matrix must
         // be multiplied by the modelview, not the other way round!
         shaderProg->setUniformValue("u_mvp_matrix", projectionMatrix * nodeModelViewMatrix);
         shaderProg->setUniformValue("u_mv_matrix", nodeModelViewMatrix);
 
-        foreach(ModelMesh mesh, node.meshes)
+        foreach(ModelMesh mesh, node.m_meshes)
         {
             if(useModelTextures)
             {
                 // Set/enable texture id if desired ....
             }
 
-            if(mesh.hasNormals)
+            if(mesh.m_hasNormals)
             {
                 shaderProg->enableAttributeArray("a_normal");
-                shaderProg->setAttributeArray("a_normal", mesh.triangleNormals.constData());
+                shaderProg->setAttributeArray("a_normal", mesh.m_triangleNormals.constData());
             }
 
-            if(mesh.hasTexcoords)
+            if(mesh.m_hasTexcoords)
             {
                 shaderProg->enableAttributeArray("a_texCoord");
-                shaderProg->setAttributeArray("a_texCoord", mesh.triangleTexcoords.constData());
+                shaderProg->setAttributeArray("a_texCoord", mesh.m_triangleTexcoords.constData());
             }
 
             shaderProg->enableAttributeArray("a_vertex");
-            shaderProg->setAttributeArray("a_vertex", mesh.triangleVertices.constData());
+            shaderProg->setAttributeArray("a_vertex", mesh.m_triangleVertices.constData());
 
-            glDrawArrays(GL_TRIANGLES, 0, mesh.triangleVertices.size());
+            glDrawArrays(GL_TRIANGLES, 0, mesh.m_triangleVertices.size());
             shaderProg->disableAttributeArray("a_vertex");
             shaderProg->disableAttributeArray("a_normal");
             shaderProg->disableAttributeArray("a_texCoord");
@@ -253,7 +253,7 @@ void Model::get_bounding_box_for_node (const struct aiNode* nd,
         aiMultiplyMatrix4(trafo,&nd->mTransformation);
 
         for (; n < nd->mNumMeshes; ++n) {
-                const struct aiMesh* mesh = scene->mMeshes[nd->mMeshes[n]];
+                const struct aiMesh* mesh = m_scene->mMeshes[nd->mMeshes[n]];
                 for (t = 0; t < mesh->mNumVertices; ++t) {
 
                         struct aiVector3D tmp = mesh->mVertices[t];
@@ -282,6 +282,6 @@ void Model::get_bounding_box (struct aiVector3D* min, struct aiVector3D* max)
 
         min->x = min->y = min->z =  1e10f;
         max->x = max->y = max->z = -1e10f;
-        get_bounding_box_for_node(scene->mRootNode,min,max,&trafo);
+        get_bounding_box_for_node(m_scene->mRootNode,min,max,&trafo);
 }
 

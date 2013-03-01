@@ -3,7 +3,7 @@
 YuvDebugWindow::YuvDebugWindow(QWidget *parent) :
     QDialog(parent)
 {
-    imageLabel = new QLabel(this);
+    m_imageLabel = new QLabel(this);
 #if 0
     QImage yuvImage("./alphamasks/fade.jpg");
     if(yuvImage.isNull())
@@ -13,12 +13,12 @@ YuvDebugWindow::YuvDebugWindow(QWidget *parent) :
     else
     {
 
-        imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
+        m_imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
     }
 #endif
-    imageLabel->setText("Video will be shown here");
+    m_imageLabel->setText("Video will be shown here");
 
     QVBoxLayout *layout = new QVBoxLayout;
-    layout->addWidget(imageLabel);
+    layout->addWidget(m_imageLabel);
     setLayout(layout);
 }

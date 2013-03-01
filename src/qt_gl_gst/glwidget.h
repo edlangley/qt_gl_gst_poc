@@ -144,6 +144,10 @@ private:
     int setupShader(QGLShaderProgram *prog, QString baseFileName, bool vertNeeded, bool fragNeeded);
     int setupShader(QGLShaderProgram *prog, GLShaderModule shaderList[], int listLen);
     int printOpenGLError(const char *file, int line);
+    int getCallingGstVecIx(int vidIx);
+
+    bool m_closing;
+    QString m_dataFilesDir;
 
     // Camera:
     // Implement position later if a sky box is desired, and perhaps FPS mode
@@ -151,72 +155,69 @@ private:
 //    float xPos;
 //    float yPos;
 //    float zPos;
-    float xRot;
-    float yRot;
-    float zRot;
-    QPoint lastPos;
-    int Rotate;
-    int xLastIncr;
-    int yLastIncr;
-    float fXInertia;
-    float fYInertia;
-    float fXInertiaOld;
-    float fYInertiaOld;
+    float m_xRot;
+    float m_yRot;
+    float m_zRot;
+    QPoint m_lastPos;
+    int m_rotateOn;
+    int m_xLastIncr;
+    int m_yLastIncr;
+    float m_xInertia;
+    float m_yInertia;
+    float m_xInertiaOld;
+    float m_yInertiaOld;
     // Deprecate:
-    GLfloat fScale; // replace with changing zPos
+    GLfloat m_scaleValue; // replace with changing zPos
 
-    QMatrix4x4 modelViewMatrix;
-    QMatrix4x4 projectionMatrix;
+    QMatrix4x4 m_modelViewMatrix;
+    QMatrix4x4 m_projectionMatrix;
 
-    int clearColor;
-    bool stackVidQuads;
-    ModelEffectType currentModelEffect;
+    int m_clearColorIndex;
+    bool m_stackVidQuads;
+    ModelEffectType m_currentModelEffectIndex;
 
-    int getCallingGstVecIx(int vidIx);
-    QVector<QString> videoLoc;
-    QVector<Pipeline*>vidPipelines;
-    bool closing;
-    QVector<VidTextureInfo> vidTextures;
+    QVector<QString> m_videoLoc;
+    QVector<Pipeline*> m_vidPipelines;
+    QVector<VidTextureInfo> m_vidTextures;
 
-    QGLShaderProgram brickProg;
-    QGLShaderProgram I420NoEffectNormalised;
-    QGLShaderProgram I420LitNormalised;
-    QGLShaderProgram I420NoEffect;
-    QGLShaderProgram I420ColourHilight;
-    QGLShaderProgram I420ColourHilightSwap;
-    QGLShaderProgram I420AlphaMask;
+    QGLShaderProgram m_brickProg;
+    QGLShaderProgram m_I420NoEffectNormalised;
+    QGLShaderProgram m_I420LitNormalised;
+    QGLShaderProgram m_I420NoEffect;
+    QGLShaderProgram m_I420ColourHilight;
+    QGLShaderProgram m_I420ColourHilightSwap;
+    QGLShaderProgram m_I420AlphaMask;
 
-    QGLShaderProgram UYVYNoEffectNormalised;
-    QGLShaderProgram UYVYLitNormalised;
-    QGLShaderProgram UYVYNoEffect;
-    QGLShaderProgram UYVYColourHilight;
-    QGLShaderProgram UYVYColourHilightSwap;
-    QGLShaderProgram UYVYAlphaMask;
+    QGLShaderProgram m_UYVYNoEffectNormalised;
+    QGLShaderProgram m_UYVYLitNormalised;
+    QGLShaderProgram m_UYVYNoEffect;
+    QGLShaderProgram m_UYVYColourHilight;
+    QGLShaderProgram m_UYVYColourHilightSwap;
+    QGLShaderProgram m_UYVYAlphaMask;
 
     // Video shader effects vars - for simplicitys sake make them general to all vids
-    QVector4D ColourHilightRangeMin;
-    QVector4D ColourHilightRangeMax;
-    QVector4D ColourComponentSwapR;
-    QVector4D ColourComponentSwapG;
-    QVector4D ColourComponentSwapB;
-    bool ColourSwapDirUpwards;
-    GLuint alphaTextureId;
-    bool alphaTextureLoaded;
-    GLuint alphaTexWidth;
-    GLuint alphaTexHeight;
+    QVector4D m_colourHilightRangeMin;
+    QVector4D m_colourHilightRangeMax;
+    QVector4D m_colourComponentSwapR;
+    QVector4D m_colourComponentSwapG;
+    QVector4D m_colourComponentSwapB;
+    bool m_colourSwapDirUpwards;
+    GLuint m_alphaTextureId;
+    bool m_alphaTextureLoaded;
+    GLuint m_alphaTexWidth;
+    GLuint m_alphaTexHeight;
 
-    Model *model;
+    Model *m_model;
 
     // FPS counter
-    int frames;
-    QTime frameTime;
+    int m_frames;
+    QTime m_frameTime;
 
 #ifdef ENABLE_YUV_WINDOW
-    YuvDebugWindow *yuvWindow;
-    QVector<QRgb> colourMap;
+    YuvDebugWindow *m_yuvWindow;
+    QVector<QRgb> m_colourMap;
 #endif
 
-    QString dataFilesDir;
 signals:
     void xRotationChanged(int angle);
     void yRotationChanged(int angle);
