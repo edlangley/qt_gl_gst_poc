@@ -55,7 +55,7 @@ void TIGStreamerPipeline::Configure()
     /* Need more buffers ref'd at once than default provides from TIViddec2 otherwise
        pipeline stalls up before we get round to unreferencing used buffers again */
     g_object_set(G_OBJECT(this->m_tividdecode),
-                 "numOutputBufs", 10,
+                 "numOutputBufs", NUM_OUTPUT_BUFS_PER_VID,
                  NULL);
 
     if (this->m_pipeline == NULL || this->m_source == NULL || this->m_qtdemux == NULL ||
