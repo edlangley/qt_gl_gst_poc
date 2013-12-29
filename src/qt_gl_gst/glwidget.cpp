@@ -430,61 +430,62 @@ void GLWidget::newFrame(int vidIx)
             this->m_vidTextures[vidIx].triStripVertices[3]       = QVector2D(VIDTEXTURE_RIGHT_X, VIDTEXTURE_BOT_Y);
         }
 
+        loadNewTexture(vidIx);
 
-        glBindTexture (GL_TEXTURE_RECTANGLE_ARB, this->m_vidTextures[vidIx].texId);
-
-        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-        switch(this->m_vidTextures[vidIx].colourFormat)
+#ifdef ENABLE_YUV_WINDOW
+        if((vidIx == 0) && (m_yuvWindow->isVisible()))
         {
-        case ColFmt_I420:
-            glTexImage2D  (GL_TEXTURE_RECTANGLE_ARB, 0, GL_LUMINANCE,
-                           this->m_vidTextures[vidIx].width,
-                           1.5f*this->m_vidTextures[vidIx].height,
-                           0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                           PIPELINE_BUFFER_VID_DATA_START(this->m_vidTextures[vidIx].buffer));
-
-#ifdef ENABLE_YUV_WINDOW
-            if((vidIx == 0) && (m_yuvWindow->isVisible()))
+            QImage yuvImage;
+            switch(this->m_vidTextures[vidIx].colourFormat)
             {
-                QImage yuvImage(PIPELINE_BUFFER_VID_DATA_START(this->m_vidTextures[vidIx].buffer),
+            case ColFmt_I420:
+            default:
+                yuvImage = QImage(this->m_vidPipelines[vidIx]->bufToVidDataStart(this->m_vidTextures[vidIx].buffer),
                                 this->m_vidTextures[vidIx].width,
-                                1.5f*this->m_vidTextures[vidIx].height,
+                                this->m_vidTextures[vidIx].height*1.5f,
                                 QImage::Format_Indexed8);
-                yuvImage.setColorTable(m_colourMap);
-                m_yuvWindow->m_imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
-            }
-#endif
-            break;
-        case ColFmt_UYVY:
-            glTexImage2D  (GL_TEXTURE_RECTANGLE_ARB, 0, GL_LUMINANCE,
-                           this->m_vidTextures[vidIx].width*2,
-                           this->m_vidTextures[vidIx].height,
-                           0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-                           PIPELINE_BUFFER_VID_DATA_START(this->m_vidTextures[vidIx].buffer));
-
-#ifdef ENABLE_YUV_WINDOW
-            if((vidIx == 0) && (m_yuvWindow->isVisible()))
-            {
-                QImage yuvImage(PIPELINE_BUFFER_VID_DATA_START(this->m_vidTextures[vidIx].buffer),
+                break;
+            case ColFmt_UYVY:
+                yuvImage = QImage(this->m_vidPipelines[vidIx]->bufToVidDataStart(this->m_vidTextures[vidIx].buffer),
                                 this->m_vidTextures[vidIx].width*2,
                                 this->m_vidTextures[vidIx].height,
                                 QImage::Format_Indexed8);
-                yuvImage.setColorTable(m_colourMap);
-                m_yuvWindow->m_imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
+                break;
             }
-#endif
-            break;
-        default:
-            qCritical("Decide how to load texture for colour format %d", this->m_vidTextures[vidIx].colourFormat);
-            break;
+            yuvImage.setColorTable(m_colourMap);
+            m_yuvWindow->m_imageLabel->setPixmap(QPixmap::fromImage(yuvImage));
         }
+#endif
+
         printOpenGLError(__FILE__, __LINE__);
 
         this->update();
+    }
+}
+
+void GLWidget::loadNewTexture(int vidIx)
+{
+    glBindTexture (GL_RECT_VID_TEXTURE_2D, this->m_vidTextures[vidIx].texId);
+
+    switch(this->m_vidTextures[vidIx].colourFormat)
+    {
+    case ColFmt_I420:
+        glTexImage2D  (GL_RECT_VID_TEXTURE_2D, 0, GL_LUMINANCE,
+                       this->m_vidTextures[vidIx].width,
+                       this->m_vidTextures[vidIx].height*1.5f,
+                       0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
+                       this->m_vidPipelines[vidIx]->bufToVidDataStart(this->m_vidTextures[vidIx].buffer));
+        break;
+    case ColFmt_UYVY:
+        glTexImage2D  (GL_RECT_VID_TEXTURE_2D, 0, GL_LUMINANCE,
+                       this->m_vidTextures[vidIx].width*2,
+                       this->m_vidTextures[vidIx].height,
+                       0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
+                       this->m_vidPipelines[vidIx]->bufToVidDataStart(this->m_vidTextures[vidIx].buffer));
+        break;
+    default:
+        qCritical("Decide how to load texture for colour format %d", this->m_vidTextures[vidIx].colourFormat);
+        break;
     }
 }
 

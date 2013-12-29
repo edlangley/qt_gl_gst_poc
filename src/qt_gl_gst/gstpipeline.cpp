@@ -404,6 +404,22 @@ ColFormat GStreamerPipeline::discoverColFormat(GstBuffer * buf)
     return ret;
 }
 
+quint32 GStreamerPipeline::discoverFourCC(GstBuffer * buf)
+{
+    guint32       uiFourCC = 0;
+    GstCaps*      pCaps	 = NULL;
+    GstStructure* pStructure = NULL;
+
+    pCaps = gst_buffer_get_caps (buf);
+    pStructure = gst_caps_get_structure (pCaps, 0);
+
+    if (gst_structure_has_name (pStructure, "video/x-raw-yuv"))
+    {
+        gst_structure_get_fourcc (pStructure, "format", &uiFourCC);
+    }
+
+    return (quint32)uiFourCC;
+}
 
 void GstIncomingBufThread::run()
 {

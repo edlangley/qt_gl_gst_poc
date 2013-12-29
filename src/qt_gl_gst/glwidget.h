@@ -144,6 +144,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
     void keyPressEvent(QKeyEvent *e);
     void closeEvent(QCloseEvent* event);
+    virtual void loadNewTexture(int vidIx);
 
 Q_SIGNALS:
     void closeRequested();

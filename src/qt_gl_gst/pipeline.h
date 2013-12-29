@@ -50,6 +50,8 @@ public:
     int getWidth() { return m_width; }
     int getHeight() { return m_height; }
     ColFormat getColourFormat() { return m_colFormat; }
+    quint32 getFourCC() { return m_fourCC; }
+    virtual unsigned char *bufToVidDataStart(void *buf) = 0;
 
     bool isFinished() { return this->m_finished; }
 
@@ -69,6 +71,7 @@ protected:
     int m_width;
     int m_height;
     ColFormat m_colFormat;
+    quint32 m_fourCC;
     bool m_vidInfoValid;
     bool m_finished;
 };
