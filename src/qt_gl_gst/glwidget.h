@@ -27,6 +27,36 @@
 #include "yuvdebugwindow.h"
 #endif
 
+#ifdef IMGTEX_EXT_NEEDED
+#include "GLES2/gl2ext.h"
+#endif
+
+// Handle texture extensions on different platforms with some generic
+// definitions here:
+#ifdef RECTTEX_EXT_NEEDED
+ #define GL_RECT_TEXTURE_2D                  GL_TEXTURE_RECTANGLE_ARB
+ #define GL_RECT_TEXTURE0                    GL_TEXTURE0_ARB
+ #define GL_RECT_TEXTURE1                    GL_TEXTURE1_ARB
+ #define GL_RECT_VID_TEXTURE_2D              GL_TEXTURE_RECTANGLE_ARB
+ #define GL_RECT_VID_TEXTURE0                GL_TEXTURE0_ARB
+ #define GL_RECT_VID_TEXTURE1                GL_TEXTURE1_ARB
+#elif IMGTEX_EXT_NEEDED
+ #define GL_RECT_TEXTURE_2D                  GL_TEXTURE_2D
+ #define GL_RECT_TEXTURE0                    GL_TEXTURE0
+ #define GL_RECT_TEXTURE1                    GL_TEXTURE1
+ #define GL_RECT_VID_TEXTURE_2D              GL_TEXTURE_STREAM_IMG
+ #define GL_RECT_VID_TEXTURE0                GL_TEXTURE0
+ #define GL_RECT_VID_TEXTURE1                GL_TEXTURE1
+#else
+ #define GL_RECT_TEXTURE_2D                  GL_TEXTURE_2D
+ #define GL_RECT_TEXTURE0                    GL_TEXTURE0
+ #define GL_RECT_TEXTURE1                    GL_TEXTURE1
+ #define GL_RECT_VID_TEXTURE_2D              GL_TEXTURE_2D
+ #define GL_RECT_VID_TEXTURE0                GL_TEXTURE0
+ #define GL_RECT_VID_TEXTURE1                GL_TEXTURE1
+#endif
+
+
 #define INERTIA_THRESHOLD       1.0f
 #define INERTIA_FACTOR          0.5f
 #define SCALE_FACTOR            0.01f

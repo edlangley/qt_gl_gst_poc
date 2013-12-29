@@ -2,11 +2,7 @@
 #include "glwidget.h"
 #include "shaderlists.h"
 
-#ifndef RECTTEX
- #define GL_TEXTURE_RECTANGLE_ARB            GL_TEXTURE_2D
- #define GL_TEXTURE0_ARB                     GL_TEXTURE0
- #define GL_TEXTURE1_ARB                     GL_TEXTURE1
-#else
+#ifdef GLU_NEEDED
  #include "GL/glu.h"
 #endif
 
@@ -146,12 +142,14 @@ void GLWidget::initializeGL()
     setupShader(&m_I420ColourHilightSwap, VidI420ColourHilightSwapShaderList, NUM_SHADERS_VIDI420_COLOURHILIGHTSWAP);
     setupShader(&m_I420AlphaMask, VidI420AlphaMaskShaderList, NUM_SHADERS_VIDI420_ALPHAMASK);
 
+#ifndef RECTTEX_EXT_NEEDED // temp to reduce error output
     setupShader(&m_UYVYNoEffectNormalised, VidUYVYNoEffectNormalisedShaderList, NUM_SHADERS_VIDUYVY_NOEFFECT_NORMALISED);
     setupShader(&m_UYVYLitNormalised, VidUYVYLitNormalisedShaderList, NUM_SHADERS_VIDUYVY_LIT_NORMALISED);
     setupShader(&m_UYVYNoEffect, VidUYVYNoEffectShaderList, NUM_SHADERS_VIDUYVY_NOEFFECT);
     setupShader(&m_UYVYColourHilight, VidUYVYColourHilightShaderList, NUM_SHADERS_VIDUYVY_COLOURHILIGHT);
     setupShader(&m_UYVYColourHilightSwap, VidUYVYColourHilightSwapShaderList, NUM_SHADERS_VIDUYVY_COLOURHILIGHTSWAP);
     setupShader(&m_UYVYAlphaMask, VidUYVYAlphaMaskShaderList, NUM_SHADERS_VIDUYVY_ALPHAMASK);
+#endif
 
     // Set uniforms for vid shaders along with other stream details when first
     // frame comes through
@@ -1238,7 +1236,7 @@ int GLWidget::printOpenGLError(const char *file, int line)
     glErr = glGetError();
     while (glErr != GL_NO_ERROR)
     {
-#ifdef RECTTEX
+#ifdef RECTTEX_EXT_NEEDED
         qCritical() << "glError in file " << file << " @ line " << line << ": " << (const char *)gluErrorString(glErr);
 #else
         qCritical() << "glError in file " << file << " @ line " << line << ": " << glErr;

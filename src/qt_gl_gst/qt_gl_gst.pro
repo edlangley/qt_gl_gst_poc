@@ -11,7 +11,7 @@ CONFIG   += console
 TARGET = qt_gl_gst
 TEMPLATE = app
 
-DEFINES += UNIX RECTTEX
+DEFINES += UNIX RECTTEX_EXT_NEEDED GLU_NEEDED
 
 SOURCES += main.cpp \
     glwidget.cpp \
