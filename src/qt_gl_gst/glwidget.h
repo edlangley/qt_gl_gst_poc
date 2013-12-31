@@ -134,22 +134,13 @@ public:
     void setYRotation(int angle);
     void setZRotation(int angle);
 
-protected:
-    void initializeGL();
-    virtual Pipeline* createPipeline(int vidIx);
-    void paintEvent(QPaintEvent *event);
-    void resizeGL(int width, int height);
-    void mousePressEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
-    void keyPressEvent(QKeyEvent *e);
-    void closeEvent(QCloseEvent* event);
-    virtual void loadNewTexture(int vidIx);
-
 Q_SIGNALS:
     void closeRequested();
     void stackVidsStateChanged(bool newState);
     void rotateStateChanged(bool newState);
+    void xRotationChanged(int angle);
+    void yRotationChanged(int angle);
+    void zRotationChanged(int angle);
 
 public Q_SLOTS:
     /* Video related */
@@ -167,6 +158,24 @@ public Q_SLOTS:
     void cycleBackgroundSlot();
     void resetPosSlot();
     void exitSlot();
+
+    void animate();
+
+protected:
+    virtual void initializeGL();
+    virtual Pipeline* createPipeline(int vidIx);
+    void paintEvent(QPaintEvent *event);
+    void resizeGL(int width, int height);
+    void mousePressEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
+    void keyPressEvent(QKeyEvent *e);
+    void closeEvent(QCloseEvent* event);
+    virtual void loadNewTexture(int vidIx);
+
+    QVector<QString> m_videoLoc;
+    QVector<Pipeline*> m_vidPipelines;
+    QVector<VidTextureInfo> m_vidTextures;
 
 private:
     void setAppropriateVidShader(int vidIx);
@@ -207,10 +216,6 @@ private:
     bool m_stackVidQuads;
     ModelEffectType m_currentModelEffectIndex;
 
-    QVector<QString> m_videoLoc;
-    QVector<Pipeline*> m_vidPipelines;
-    QVector<VidTextureInfo> m_vidTextures;
-
     QGLShaderProgram m_brickProg;
     QGLShaderProgram m_I420NoEffectNormalised;
     QGLShaderProgram m_I420LitNormalised;
@@ -248,14 +253,6 @@ private:
     YuvDebugWindow *m_yuvWindow;
     QVector<QRgb> m_colourMap;
 #endif
-
-signals:
-    void xRotationChanged(int angle);
-    void yRotationChanged(int angle);
-    void zRotationChanged(int angle);
-
-public slots:
-    void animate();
 
 };
 

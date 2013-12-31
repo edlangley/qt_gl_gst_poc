@@ -53,6 +53,13 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     for(int vidIx = 0; vidIx < this->m_videoLoc.size(); vidIx++)
     {
         this->m_vidPipelines.push_back(this->createPipeline(vidIx));
+
+        if(this->m_vidPipelines[vidIx] == NULL)
+        {
+            qCritical("Error creating pipeline for vid %d", vidIx);
+            return;
+        }
+
         QObject::connect(this->m_vidPipelines[vidIx], SIGNAL(finished(int)),
                          this, SLOT(pipelineFinished(int)));
         QObject::connect(this, SIGNAL(closeRequested()),
@@ -377,7 +384,8 @@ void GLWidget::newFrame(int vidIx)
         Pipeline *pipeline = this->m_vidPipelines[vidIx];
 
 
-        /* Vid frame pointer is initialized as null */
+        /* If we have a vid frame currently, return it back to the video
+           system */
         if(this->m_vidTextures[vidIx].buffer)
         {
             pipeline->m_outgoingBufQueue.put(this->m_vidTextures[vidIx].buffer);
@@ -391,6 +399,7 @@ void GLWidget::newFrame(int vidIx)
         }
         else
         {
+            this->m_vidTextures[vidIx].buffer = NULL;
             return;
         }
 
@@ -531,37 +540,18 @@ void GLWidget::pipelineFinished(int vidIx)
             close();
         }
     }
-#if 0
-    else if(this->m_vidPipelines[vidIx]->chooseNew())
-    {
-        // Confirm that we have the new filename before we do anything else
-        QString newFileName = QFileDialog::getOpenFileName(0, "Select a video file",
-                                                           ".", "Videos (*.avi *.mkv *.ogg *.asf *.mov);;All (*.*)");
-
-        if(newFileName.isNull() == false)
-        {
-            delete(this->m_vidPipelines[vidIx]);
-            this->m_vidTextures[vidIx].texInfoValid = false;
-
-            this->m_videoLoc[vidIx] = newFileName;
-            this->m_vidPipelines[vidIx] = createPipeline(vidIx);
-
-            QObject::connect(this->m_vidPipelines[vidIx], SIGNAL(finished(int)),
-                             this, SLOT(pipelineFinished(int)));
-            QObject::connect(this, SIGNAL(closeRequested()),
-                             this->m_vidPipelines[vidIx], SLOT(stop()), Qt::QueuedConnection);
-
-            this->m_vidPipelines[vidIx]->Configure();
-            this->m_vidPipelines[vidIx]->Start();
-        }
-    }
-#endif
     else
     {
         delete(this->m_vidPipelines[vidIx]);
         this->m_vidTextures[vidIx].texInfoValid = false;
 
         this->m_vidPipelines[vidIx] = createPipeline(vidIx);
+
+        if(this->m_vidPipelines[vidIx] == NULL)
+        {
+            qCritical("Error creating pipeline for vid %d", vidIx);
+            return;
+        }
 
         QObject::connect(this->m_vidPipelines[vidIx], SIGNAL(finished(int)),
                          this, SLOT(pipelineFinished(int)));

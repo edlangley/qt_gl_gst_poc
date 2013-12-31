@@ -210,11 +210,11 @@ void GStreamerPipeline::on_gst_buffer(GstElement * element,
     p->m_incomingBufQueue.put(buf);
     PIPELINE_DEBUG("GStreamerPipeline: vid %d pushed buffer %p to incoming queue", p->getVidIx(), buf);
 
-    if (p->m_incomingBufQueue.size() > 3)
-    {
+//    if (p->m_incomingBufQueue.size() > 3)
+//    {
         PIPELINE_DEBUG("GStreamerPipeline: vid %d incoming queue size is > 3, sending a buf to GLES", p->getVidIx());
         p->NotifyNewFrame();
-    }
+//    }
 }
 
 gboolean GStreamerPipeline::bus_call(GstBus *bus, GstMessage *msg, GStreamerPipeline* p)
