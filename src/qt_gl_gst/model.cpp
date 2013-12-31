@@ -151,7 +151,7 @@ int Model::Load(QString fileName)
     }
 
     // Load model
-    m_scene = aiImportFile(fileName.toAscii().constData(), aiProcessPreset_TargetRealtime_Quality);
+    m_scene = aiImportFile(fileName.toUtf8().constData(), aiProcessPreset_TargetRealtime_Quality);
 
     if (!m_scene)
     {

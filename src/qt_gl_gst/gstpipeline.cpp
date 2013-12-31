@@ -46,7 +46,7 @@ void GStreamerPipeline::Configure()
     else
     {
         this->m_source = gst_element_factory_make ("filesrc", "filesrc");
-        g_object_set (G_OBJECT (this->m_source), "location", /*"video.avi"*/ m_videoLocation.toAscii().constData(), NULL);
+        g_object_set (G_OBJECT (this->m_source), "location", /*"video.avi"*/ m_videoLocation.toUtf8().constData(), NULL);
     }
     this->m_decodebin = gst_element_factory_make ("decodebin2", "decodebin");
     this->m_videosink = gst_element_factory_make ("fakesink", "videosink");

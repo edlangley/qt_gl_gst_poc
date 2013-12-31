@@ -30,7 +30,7 @@ void TIGStreamerPipeline::Configure()
     else
     {
         this->m_source = gst_element_factory_make ("filesrc", "filesrc");
-        g_object_set (G_OBJECT (this->m_source), "location", m_videoLocation.toAscii().constData(), NULL);
+        g_object_set (G_OBJECT (this->m_source), "location", m_videoLocation.toUtf8().constData(), NULL);
     }
 
     // gst-launch -v filesrc location=sample.mp4 ! qtdemux name=demux demux.audio_00 !

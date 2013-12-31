@@ -94,7 +94,7 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     {
         m_dataFilesDir += "/";
     }
-    qDebug("m_dataFilesDir = %s", m_dataFilesDir.toAscii().constData());
+    qDebug("m_dataFilesDir = %s", m_dataFilesDir.toUtf8().constData());
 }
 
 GLWidget::~GLWidget()
@@ -104,7 +104,7 @@ GLWidget::~GLWidget()
 void GLWidget::initializeGL()
 {
     QString verStr((const char*)glGetString(GL_VERSION));
-    qDebug("GL_VERSION: %s", verStr.toAscii().constData());
+    qDebug("GL_VERSION: %s", verStr.toUtf8().constData());
 
     QStringList verNums = verStr.split(QRegExp("[ .]"));
     bool foundVerNum = false;
