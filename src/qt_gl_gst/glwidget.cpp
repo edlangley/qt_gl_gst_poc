@@ -151,6 +151,11 @@ void GLWidget::initializeGL()
     setupShader(&m_UYVYAlphaMask, VidUYVYAlphaMaskShaderList, NUM_SHADERS_VIDUYVY_ALPHAMASK);
 #endif
 
+    glTexParameteri(GL_RECT_VID_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_RECT_VID_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_RECT_VID_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_RECT_VID_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
     // Set uniforms for vid shaders along with other stream details when first
     // frame comes through
 
@@ -228,8 +233,8 @@ void GLWidget::paintEvent(QPaintEvent *event)
         currentShader = &m_brickProg;
         break;
     case ModelEffectVideo:
-        glActiveTexture(GL_TEXTURE0_ARB);
-        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->m_vidTextures[0].texId);
+        glActiveTexture(GL_RECT_VID_TEXTURE0);
+        glBindTexture(GL_RECT_VID_TEXTURE_2D, this->m_vidTextures[0].texId);
 
         this->m_vidTextures[0].effect = VidShaderLitNormalisedTexCoords;
         setAppropriateVidShader(0);
@@ -263,16 +268,16 @@ void GLWidget::paintEvent(QPaintEvent *event)
         if(this->m_vidTextures[vidIx].texInfoValid)
         {
             // Render a quad with the video on it:
-            glActiveTexture(GL_TEXTURE0_ARB);
-            glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->m_vidTextures[vidIx].texId);
+            glActiveTexture(GL_RECT_VID_TEXTURE0);
+            glBindTexture(GL_RECT_VID_TEXTURE_2D, this->m_vidTextures[vidIx].texId);
             printOpenGLError(__FILE__, __LINE__);
 
             if((this->m_vidTextures[vidIx].effect == VidShaderAlphaMask) && this->m_alphaTextureLoaded)
             {
                 glEnable (GL_BLEND);
                 glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                glActiveTexture(GL_TEXTURE1_ARB);
-                glBindTexture(GL_TEXTURE_RECTANGLE_ARB, this->m_alphaTextureId);
+                glActiveTexture(GL_RECT_TEXTURE1);
+                glBindTexture(GL_RECT_TEXTURE_2D, this->m_alphaTextureId);
             }
 
             this->m_vidTextures[vidIx].shader->bind();
@@ -708,7 +713,7 @@ void GLWidget::loadAlphaSlot()
             }
 
             // Bind new image to texture
-            m_alphaTextureId = bindTexture(alphaTexImage.mirrored(true, true), GL_TEXTURE_RECTANGLE_ARB);
+            m_alphaTextureId = bindTexture(alphaTexImage.mirrored(true, true), GL_RECT_TEXTURE_2D);
             m_alphaTexWidth = alphaTexImage.width();
             m_alphaTexHeight = alphaTexImage.height();
             // Update alpha tex co-ords in shader in case it is active:

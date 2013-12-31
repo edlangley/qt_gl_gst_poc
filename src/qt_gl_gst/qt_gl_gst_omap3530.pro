@@ -11,7 +11,7 @@ CONFIG   += console
 TARGET = qt_gl_gst
 TEMPLATE = app
 
-DEFINES += UNIX OMAP3530
+DEFINES += UNIX OMAP3530 IMGTEX_EXT_NEEDED
 
 SOURCES += main.cpp \
     mainwindow.cpp \
