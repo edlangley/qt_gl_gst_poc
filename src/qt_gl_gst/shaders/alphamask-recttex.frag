@@ -3,8 +3,6 @@
 // This shader must be linked with another containing the yuv2rgb function
 // to handle the video data first
 
-#extension GL_ARB_texture_rectangle : enable
-
 uniform sampler2DRect u_alphaTexture;
 
 varying vec3 v_alphaTexCoord;
