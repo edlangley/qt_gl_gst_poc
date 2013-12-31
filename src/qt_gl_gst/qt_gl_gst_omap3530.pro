@@ -22,7 +22,8 @@ SOURCES += main.cpp \
     shaderlists.cpp \
     model.cpp \
     yuvdebugwindow.cpp \
-    controlsform.cpp
+    controlsform.cpp \
+    glpowervrwidget.cpp
 
 HEADERS  += mainwindow.h \
     glwidget.h \
@@ -33,7 +34,8 @@ HEADERS  += mainwindow.h \
     shaderlists.h \
     model.h \
     yuvdebugwindow.h \
-    controlsform.h
+    controlsform.h \
+    glpowervrwidget.h
 
 FORMS += \
     controlsform.ui
@@ -47,5 +49,13 @@ unix {
 LIBS += -L. -lassimp
 INCLUDEPATH += /mnt/data/not_backedup/3d_existing_code/assimp--2.0.863-sdk/include/
 
+# Imagination Technologies PowerVR Streaming texture driver:
+INCLUDEPATH += /home/elangley/not_backedup/bc-cat-0.2.0/module/
+
+# TI CMem lib:
+INCLUDEPATH += /home/elangley/not_backedup/ti-dvsdk_omap3530-evm_4_01_00_09/linuxutils_2_25_05_11/packages/ti/sdo/linuxutils/cmem/include/
+LIBS += -l:cmem.a470MV
+
+# Run on remote Linux device parameters:
 target.path += /opt/qt_gl_gst-omap3530evm
 INSTALLS += target

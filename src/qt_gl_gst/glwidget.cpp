@@ -198,16 +198,7 @@ void GLWidget::initializeGL()
 
 Pipeline* GLWidget::createPipeline(int vidIx)
 {
-    Pipeline *newPipelinePtr;
-
-    // Could derive a custom class later to clean this up a bit
-#if defined OMAP3530
-    newPipelinePtr = new TIGStreamerPipeline(vidIx, this->m_videoLoc[vidIx], SLOT(newFrame(int)), this);
-#elif defined UNIX
-    newPipelinePtr = new GStreamerPipeline(vidIx, this->m_videoLoc[vidIx], SLOT(newFrame(int)), this);
-#endif
-
-    return newPipelinePtr;
+    return new GStreamerPipeline(vidIx, this->m_videoLoc[vidIx], SLOT(newFrame(int)), this);
 }
 
 void GLWidget::paintEvent(QPaintEvent *event)
