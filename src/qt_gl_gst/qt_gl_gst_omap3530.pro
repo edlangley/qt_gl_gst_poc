@@ -40,10 +40,9 @@ HEADERS  += mainwindow.h \
 FORMS += \
     controlsform.ui
 
-unix {
-    CONFIG += link_pkgconfig
-    PKGCONFIG += gstreamer-0.10
-}
+# Gstreamer:
+CONFIG += link_pkgconfig
+PKGCONFIG += gstreamer-0.10
 
 # Model loading using Assimp:
 LIBS += -L. -lassimp

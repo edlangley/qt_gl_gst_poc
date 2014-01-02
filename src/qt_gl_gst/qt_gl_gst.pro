@@ -13,7 +13,8 @@ TEMPLATE = app
 
 DEFINES += UNIX RECTTEX_EXT_NEEDED GLU_NEEDED
 
-SOURCES += main.cpp \
+SOURCES += \
+    main.cpp \
     glwidget.cpp \
     model.cpp \
     gstpipeline.cpp \
@@ -36,24 +37,17 @@ HEADERS  += \
     yuvdebugwindow.h \
     controlsform.h
 
-LIBS += -lgstreamer-0.10 \
-    -lgstinterfaces-0.10 \
-    -lglib-2.0 \
-    -lgmodule-2.0 \
-    -lgobject-2.0 \
-    -lgthread-2.0 \
-    -lGLU \
-    -lGL \
-    -lGLEW
-
 FORMS += \
     controlsform.ui
 
-INCLUDEPATH += /usr/include/gstreamer-0.10 \
-    /usr/local/include/gstreamer-0.10 \
-    /usr/include/glib-2.0 \
-    /usr/lib/i386-linux-gnu/glib-2.0/include \
-    /usr/include/libxml2
+# OpenGL support libraries:
+LIBS += -lGLU \
+    -lGL \
+    -lGLEW
+
+# Gstreamer:
+CONFIG += link_pkgconfig
+PKGCONFIG += gstreamer-0.10
 
 # Model loading using Assimp:
 LIBS += -L. -lassimp
