@@ -47,9 +47,6 @@ PKGCONFIG += gstreamer-0.10
 # Model loading using Assimp:
 PKGCONFIG += assimp
 
-# Imagination Technologies PowerVR Streaming texture driver:
-INCLUDEPATH += /home/elangley/not_backedup/bc-cat-0.2.0/module/
-
 # TI CMem lib:
 INCLUDEPATH += /home/elangley/not_backedup/ti-dvsdk_omap3530-evm_4_01_00_09/linuxutils_2_25_05_11/packages/ti/sdo/linuxutils/cmem/include/
 LIBS += -l:cmem.a470MV
