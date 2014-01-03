@@ -45,8 +45,7 @@ CONFIG += link_pkgconfig
 PKGCONFIG += gstreamer-0.10
 
 # Model loading using Assimp:
-LIBS += -L. -lassimp
-INCLUDEPATH += /mnt/data/not_backedup/3d_existing_code/assimp--2.0.863-sdk/include/
+PKGCONFIG += assimp
 
 # Imagination Technologies PowerVR Streaming texture driver:
 INCLUDEPATH += /home/elangley/not_backedup/bc-cat-0.2.0/module/
