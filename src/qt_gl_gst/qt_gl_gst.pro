@@ -20,7 +20,6 @@ SOURCES += \
     gstpipeline.cpp \
     pipeline.cpp \
     shaderlists.cpp \
-    tigstpipeline.cpp \
     mainwindow.cpp \
     yuvdebugwindow.cpp \
     controlsform.cpp
@@ -32,7 +31,6 @@ HEADERS  += \
     gstpipeline.h \
     pipeline.h \
     shaderlists.h \
-    tigstpipeline.h \
     mainwindow.h \
     yuvdebugwindow.h \
     controlsform.h
