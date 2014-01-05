@@ -48,8 +48,9 @@ PKGCONFIG += gstreamer-0.10
 PKGCONFIG += assimp
 
 # TI CMem lib:
-INCLUDEPATH += /home/elangley/not_backedup/ti-dvsdk_omap3530-evm_4_01_00_09/linuxutils_2_25_05_11/packages/ti/sdo/linuxutils/cmem/include/
-LIBS += -l:cmem.a470MV
+INCLUDEPATH += $$(SDK_PATH)/../linuxutils_2_25_05_11/packages/ti/sdo/linuxutils/cmem/include/
+LIBS += -L$$(SDK_PATH)/../linuxutils_2_25_05_11/packages/ti/sdo/linuxutils/cmem/lib -l:cmem.a470MV
+
 
 # Run on remote Linux device parameters:
 target.path += /opt/qt_gl_gst-omap3530evm
