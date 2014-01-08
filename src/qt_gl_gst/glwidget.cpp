@@ -966,6 +966,7 @@ void GLWidget::setAppropriateVidShader(int vidIx)
 {
     switch(this->m_vidTextures[vidIx].colourFormat)
     {
+#ifdef VIDI420_SHADERS_NEEDED
     case ColFmt_I420:
         switch(this->m_vidTextures[vidIx].effect)
         {
@@ -989,6 +990,8 @@ void GLWidget::setAppropriateVidShader(int vidIx)
             break;
         }
         break;
+#endif
+#ifdef VIDUYVY_SHADERS_NEEDED
     case ColFmt_UYVY:
         switch(this->m_vidTextures[vidIx].effect)
         {
@@ -1012,9 +1015,10 @@ void GLWidget::setAppropriateVidShader(int vidIx)
             break;
         }
         break;
-
+#endif
     default:
-        qCritical ("Haven't implemented a shader for colour format %d yet", this->m_vidTextures[vidIx].colourFormat);
+        qCritical ("Haven't implemented a shader for colour format %d yet, or its not enabled in the build",
+                   this->m_vidTextures[vidIx].colourFormat);
         break;
     }
 }

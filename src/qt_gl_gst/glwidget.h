@@ -220,19 +220,22 @@ private:
     ModelEffectType m_currentModelEffectIndex;
 
     QGLShaderProgram m_brickProg;
+#ifdef VIDI420_SHADERS_NEEDED
     QGLShaderProgram m_I420NoEffectNormalised;
     QGLShaderProgram m_I420LitNormalised;
     QGLShaderProgram m_I420NoEffect;
     QGLShaderProgram m_I420ColourHilight;
     QGLShaderProgram m_I420ColourHilightSwap;
     QGLShaderProgram m_I420AlphaMask;
-
+#endif
+#ifdef VIDUYVY_SHADERS_NEEDED
     QGLShaderProgram m_UYVYNoEffectNormalised;
     QGLShaderProgram m_UYVYLitNormalised;
     QGLShaderProgram m_UYVYNoEffect;
     QGLShaderProgram m_UYVYColourHilight;
     QGLShaderProgram m_UYVYColourHilightSwap;
     QGLShaderProgram m_UYVYAlphaMask;
+#endif
 
     // Video shader effects vars - for simplicitys sake make them general to all vids
     QVector4D m_colourHilightRangeMin;
