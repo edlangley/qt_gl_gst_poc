@@ -142,14 +142,16 @@ void GLWidget::initializeGL()
     m_brickProg.release();
     printOpenGLError(__FILE__, __LINE__);
 
+#ifdef VIDI420_SHADERS_NEEDED
     setupShader(&m_I420NoEffectNormalised, VidI420NoEffectNormalisedShaderList, NUM_SHADERS_VIDI420_NOEFFECT_NORMALISED);
     setupShader(&m_I420LitNormalised, VidI420LitNormalisedShaderList, NUM_SHADERS_VIDI420_LIT_NORMALISED);
     setupShader(&m_I420NoEffect, VidI420NoEffectShaderList, NUM_SHADERS_VIDI420_NOEFFECT);
     setupShader(&m_I420ColourHilight, VidI420ColourHilightShaderList, NUM_SHADERS_VIDI420_COLOURHILIGHT);
     setupShader(&m_I420ColourHilightSwap, VidI420ColourHilightSwapShaderList, NUM_SHADERS_VIDI420_COLOURHILIGHTSWAP);
     setupShader(&m_I420AlphaMask, VidI420AlphaMaskShaderList, NUM_SHADERS_VIDI420_ALPHAMASK);
+#endif
 
-#ifndef RECTTEX_EXT_NEEDED // temp to reduce error output
+#ifdef VIDUYVY_SHADERS_NEEDED
     setupShader(&m_UYVYNoEffectNormalised, VidUYVYNoEffectNormalisedShaderList, NUM_SHADERS_VIDUYVY_NOEFFECT_NORMALISED);
     setupShader(&m_UYVYLitNormalised, VidUYVYLitNormalisedShaderList, NUM_SHADERS_VIDUYVY_LIT_NORMALISED);
     setupShader(&m_UYVYNoEffect, VidUYVYNoEffectShaderList, NUM_SHADERS_VIDUYVY_NOEFFECT);
@@ -1223,7 +1225,7 @@ int GLWidget::printOpenGLError(const char *file, int line)
     glErr = glGetError();
     while (glErr != GL_NO_ERROR)
     {
-#ifdef RECTTEX_EXT_NEEDED
+#ifdef GLU_NEEDED
         qCritical() << "glError in file " << file << " @ line " << line << ": " << (const char *)gluErrorString(glErr);
 #else
         qCritical() << "glError in file " << file << " @ line " << line << ": " << glErr;

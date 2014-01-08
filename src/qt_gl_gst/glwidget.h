@@ -40,6 +40,7 @@
  #define GL_RECT_VID_TEXTURE_2D              GL_TEXTURE_RECTANGLE_ARB
  #define GL_RECT_VID_TEXTURE0                GL_TEXTURE0_ARB
  #define GL_RECT_VID_TEXTURE1                GL_TEXTURE1_ARB
+ #define VIDCONV_FRAG_SHADER_SUFFIX          "-recttex"
 #elif IMGTEX_EXT_NEEDED
  #define GL_RECT_TEXTURE_2D                  GL_TEXTURE_2D
  #define GL_RECT_TEXTURE0                    GL_TEXTURE0
@@ -47,6 +48,7 @@
  #define GL_RECT_VID_TEXTURE_2D              GL_TEXTURE_STREAM_IMG
  #define GL_RECT_VID_TEXTURE0                GL_TEXTURE0
  #define GL_RECT_VID_TEXTURE1                GL_TEXTURE1
+ #define VIDCONV_FRAG_SHADER_SUFFIX          "-imgstream"
 #else
  #define GL_RECT_TEXTURE_2D                  GL_TEXTURE_2D
  #define GL_RECT_TEXTURE0                    GL_TEXTURE0
@@ -54,6 +56,7 @@
  #define GL_RECT_VID_TEXTURE_2D              GL_TEXTURE_2D
  #define GL_RECT_VID_TEXTURE0                GL_TEXTURE0
  #define GL_RECT_VID_TEXTURE1                GL_TEXTURE1
+ #define VIDCONV_FRAG_SHADER_SUFFIX          ""
 #endif
 
 

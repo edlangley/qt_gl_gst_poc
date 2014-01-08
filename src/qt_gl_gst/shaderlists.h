@@ -6,6 +6,7 @@
 #define NUM_SHADERS_BRICKGLES       2
 extern GLShaderModule BrickGLESShaderList[NUM_SHADERS_BRICKGLES];
 
+#ifdef VIDI420_SHADERS_NEEDED
 /* I420 */
 #define NUM_SHADERS_VIDI420_NOEFFECT_NORMALISED       3
 extern GLShaderModule VidI420NoEffectNormalisedShaderList[NUM_SHADERS_VIDI420_NOEFFECT_NORMALISED];
@@ -24,7 +25,9 @@ extern GLShaderModule VidI420ColourHilightSwapShaderList[NUM_SHADERS_VIDI420_COL
 
 #define NUM_SHADERS_VIDI420_ALPHAMASK       3
 extern GLShaderModule VidI420AlphaMaskShaderList[NUM_SHADERS_VIDI420_ALPHAMASK];
+#endif
 
+#ifdef VIDUYVY_SHADERS_NEEDED
 /* UYVY */
 #define NUM_SHADERS_VIDUYVY_NOEFFECT_NORMALISED       3
 extern GLShaderModule VidUYVYNoEffectNormalisedShaderList[NUM_SHADERS_VIDUYVY_NOEFFECT_NORMALISED];
@@ -43,6 +46,7 @@ extern GLShaderModule VidUYVYColourHilightSwapShaderList[NUM_SHADERS_VIDUYVY_COL
 
 #define NUM_SHADERS_VIDUYVY_ALPHAMASK       3
 extern GLShaderModule VidUYVYAlphaMaskShaderList[NUM_SHADERS_VIDUYVY_ALPHAMASK];
+#endif
 
 
 #endif // SHADERLISTS_H
