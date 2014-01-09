@@ -236,6 +236,18 @@ void GLWidget::paintEvent(QPaintEvent *event)
         glActiveTexture(GL_RECT_VID_TEXTURE0);
         glBindTexture(GL_RECT_VID_TEXTURE_2D, this->m_vidTextures[0].texId);
 
+        this->m_vidTextures[0].effect = VidShaderNoEffectNormalisedTexCoords;
+        setAppropriateVidShader(0);
+        this->m_vidTextures[0].shader->bind();
+        setVidShaderVars(0, false);
+
+        currentShader = this->m_vidTextures[0].shader;
+        break;
+
+    case ModelEffectVideoLit:
+        glActiveTexture(GL_RECT_VID_TEXTURE0);
+        glBindTexture(GL_RECT_VID_TEXTURE_2D, this->m_vidTextures[0].texId);
+
         this->m_vidTextures[0].effect = VidShaderLitNormalisedTexCoords;
         setAppropriateVidShader(0);
         this->m_vidTextures[0].shader->bind();
@@ -253,6 +265,7 @@ void GLWidget::paintEvent(QPaintEvent *event)
         currentShader->release();
         break;
     case ModelEffectVideo:
+    case ModelEffectVideoLit:
         this->m_vidTextures[0].effect = VidShaderNoEffect;
         setAppropriateVidShader(0);
         this->m_vidTextures[0].shader->bind();

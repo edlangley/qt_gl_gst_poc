@@ -75,7 +75,8 @@ typedef enum
     ModelEffectFirst = 0,
     ModelEffectBrick = 0,
     ModelEffectVideo = 1,
-    ModelEffectLast = 1,
+    ModelEffectVideoLit = 2,
+    ModelEffectLast = 2,
 } ModelEffectType;
 
 typedef enum
