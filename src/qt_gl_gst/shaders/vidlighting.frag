@@ -10,6 +10,7 @@ void main(void)
 
     colour  = yuv2rgb();
     colour *= v_LightIntensity;
-    gl_FragColor = colour;
+//    gl_FragColor = colour;
+    gl_FragColor = vec4(colour.rgb, 1.0);
 }
 
