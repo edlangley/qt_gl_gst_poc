@@ -438,16 +438,16 @@ void GLWidget::newFrame(int vidIx)
             GLfloat vidHeight = this->m_vidTextures[vidIx].height;
 
             this->m_vidTextures[vidIx].triStripTexCoords[0]      = QVector2D(vidWidth, 0.0f);
-            this->m_vidTextures[vidIx].triStripVertices[0]       = QVector2D(VIDTEXTURE_LEFT_X, VIDTEXTURE_TOP_Y);
+            this->m_vidTextures[vidIx].triStripVertices[0]       = QVector2D(VIDTEXTURE_RIGHT_X, VIDTEXTURE_TOP_Y);
 
             this->m_vidTextures[vidIx].triStripTexCoords[1]      = QVector2D(0.0f, 0.0f);
-            this->m_vidTextures[vidIx].triStripVertices[1]       = QVector2D(VIDTEXTURE_RIGHT_X, VIDTEXTURE_TOP_Y);
+            this->m_vidTextures[vidIx].triStripVertices[1]       = QVector2D(VIDTEXTURE_LEFT_X, VIDTEXTURE_TOP_Y);
 
             this->m_vidTextures[vidIx].triStripTexCoords[2]      = QVector2D(vidWidth, vidHeight);
-            this->m_vidTextures[vidIx].triStripVertices[2]       = QVector2D(VIDTEXTURE_LEFT_X, VIDTEXTURE_BOT_Y);
+            this->m_vidTextures[vidIx].triStripVertices[2]       = QVector2D(VIDTEXTURE_RIGHT_X, VIDTEXTURE_BOT_Y);
 
             this->m_vidTextures[vidIx].triStripTexCoords[3]      = QVector2D(0.0f, vidHeight);
-            this->m_vidTextures[vidIx].triStripVertices[3]       = QVector2D(VIDTEXTURE_RIGHT_X, VIDTEXTURE_BOT_Y);
+            this->m_vidTextures[vidIx].triStripVertices[3]       = QVector2D(VIDTEXTURE_LEFT_X, VIDTEXTURE_BOT_Y);
         }
 
         loadNewTexture(vidIx);
