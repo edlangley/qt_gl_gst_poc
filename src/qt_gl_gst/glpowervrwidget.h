@@ -16,7 +16,7 @@ public:
 protected:
     void initializeGL();
     virtual Pipeline* createPipeline(int vidIx);
-    void loadNewTexture(int vidIx);
+    bool loadNewTexture(int vidIx);
 
 signals:
     

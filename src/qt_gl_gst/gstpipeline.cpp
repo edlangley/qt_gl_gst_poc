@@ -17,6 +17,8 @@ GStreamerPipeline::GStreamerPipeline(int vidIx,
     m_bus(NULL),
     m_pipeline(NULL)
 {
+    PIPELINE_DEBUG("GStreamerPipeline constructor entered");
+
     m_incomingBufThread = new GstIncomingBufThread(this, this);
     m_outgoingBufThread = new GstOutgoingBufThread(this, this);
 
@@ -30,6 +32,8 @@ GStreamerPipeline::~GStreamerPipeline()
 
 void GStreamerPipeline::Configure()
 {
+    PIPELINE_DEBUG("GStreamerPipeline::Configure entered");
+
     gst_init (NULL, NULL);
 
 #ifdef Q_WS_WIN
@@ -78,8 +82,7 @@ void GStreamerPipeline::Configure()
 
 void GStreamerPipeline::Start()
 {
-    GstStateChangeReturn ret =
-    gst_element_set_state(GST_ELEMENT(this->m_pipeline), GST_STATE_PLAYING);
+    GstStateChangeReturn ret = gst_element_set_state(GST_ELEMENT(this->m_pipeline), GST_STATE_PLAYING);
     if (ret == GST_STATE_CHANGE_FAILURE)
     {
         qDebug("Failed to start up pipeline!");
@@ -183,6 +186,9 @@ void GStreamerPipeline::on_gst_buffer(GstElement * element,
                         GstPad * pad,
                         GStreamerPipeline* p)
 {
+    PIPELINE_DEBUG("on_gst_buffer: vid %d, element=%p, buf=%p, pad=%p, p=%p, bufdata=%p\n",
+                   p->getVidIx(), element, buf, pad, p, GST_BUFFER_DATA(buf));
+
     Q_UNUSED(pad)
     Q_UNUSED(element)
 
@@ -210,11 +216,8 @@ void GStreamerPipeline::on_gst_buffer(GstElement * element,
     p->m_incomingBufQueue.put(buf);
     PIPELINE_DEBUG("GStreamerPipeline: vid %d pushed buffer %p to incoming queue", p->getVidIx(), buf);
 
-//    if (p->m_incomingBufQueue.size() > 3)
-//    {
-        PIPELINE_DEBUG("GStreamerPipeline: vid %d incoming queue size is > 3, sending a buf to GLES", p->getVidIx());
-        p->NotifyNewFrame();
-//    }
+    PIPELINE_DEBUG("GStreamerPipeline: vid %d sending buf to GLES", p->getVidIx());
+    p->NotifyNewFrame();
 }
 
 gboolean GStreamerPipeline::bus_call(GstBus *bus, GstMessage *msg, GStreamerPipeline* p)
@@ -253,7 +256,7 @@ gboolean GStreamerPipeline::bus_call(GstBus *bus, GstMessage *msg, GStreamerPipe
 
 ColFormat GStreamerPipeline::discoverColFormat(GstBuffer * buf)
 {
-    // Stole this whole function, edit for consistent style later
+    // Edit for consistent style later
     gchar*	      pTmp	 = NULL;
     GstCaps*      pCaps	 = NULL;
     GstStructure* pStructure = NULL;
@@ -395,8 +398,10 @@ ColFormat GStreamerPipeline::discoverColFormat(GstBuffer * buf)
             }
     }
     else
+    {
             g_print ("Unsupported caps name %s",
                      gst_structure_get_name (pStructure));
+    }
 
     gst_caps_unref (pCaps);
     pCaps = NULL;
@@ -453,12 +458,12 @@ void GstOutgoingBufThread::run()
         if(m_pipelinePtr->m_outgoingBufQueue.get((void**)(&buf_old), QUEUE_THREADBLOCK_WAITTIME_MS))
         {
             if (buf_old)
+            {
                 gst_buffer_unref(buf_old);
-        }
-
-        PIPELINE_DEBUG("GStreamerPipeline: vid %d popped buffer %p from outgoing queue", m_pipelinePtr->getVidIx(), buf_old);
-        PIPELINE_DEBUG("GStreamerPipeline: vid %d m_outgoingBufQueue size is = %d", m_pipelinePtr->getVidIx(), m_pipelinePtr->m_outgoingBufQueue.size());
-
+                PIPELINE_DEBUG("GStreamerPipeline: vid %d popped buffer %p from outgoing queue", m_pipelinePtr->getVidIx(), buf_old);
+                PIPELINE_DEBUG("GStreamerPipeline: vid %d m_outgoingBufQueue size is = %d", m_pipelinePtr->getVidIx(), m_pipelinePtr->m_outgoingBufQueue.size());
+            }
+        } 
     }
 
     PIPELINE_DEBUG("GStreamerPipeline: vid %d outgoing buf thread finished", m_pipelinePtr->getVidIx());

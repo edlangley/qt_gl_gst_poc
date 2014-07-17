@@ -49,25 +49,6 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
         m_videoLoc.push_back(QString(argv[vidIx]));
     }
 
-    // Instantiate video pipeline for each filename specified
-    for(int vidIx = 0; vidIx < this->m_videoLoc.size(); vidIx++)
-    {
-        this->m_vidPipelines.push_back(this->createPipeline(vidIx));
-
-        if(this->m_vidPipelines[vidIx] == NULL)
-        {
-            qCritical("Error creating pipeline for vid %d", vidIx);
-            return;
-        }
-
-        QObject::connect(this->m_vidPipelines[vidIx], SIGNAL(finished(int)),
-                         this, SLOT(pipelineFinished(int)));
-        QObject::connect(this, SIGNAL(closeRequested()),
-                         this->m_vidPipelines[vidIx], SLOT(Stop()), Qt::QueuedConnection);
-
-        this->m_vidPipelines[vidIx]->Configure();
-    }
-
     m_model = NULL;
 
     m_frames = 0;
@@ -99,6 +80,28 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
 
 GLWidget::~GLWidget()
 {
+}
+
+void GLWidget::initVideo()
+{
+    // Instantiate video pipeline for each filename specified
+    for(int vidIx = 0; vidIx < this->m_videoLoc.size(); vidIx++)
+    {
+        this->m_vidPipelines.push_back(this->createPipeline(vidIx));
+
+        if(this->m_vidPipelines[vidIx] == NULL)
+        {
+            qCritical("Error creating pipeline for vid %d", vidIx);
+            return;
+        }
+
+        QObject::connect(this->m_vidPipelines[vidIx], SIGNAL(finished(int)),
+                         this, SLOT(pipelineFinished(int)));
+        QObject::connect(this, SIGNAL(closeRequested()),
+                         this->m_vidPipelines[vidIx], SLOT(Stop()), Qt::QueuedConnection);
+
+        this->m_vidPipelines[vidIx]->Configure();
+    }
 }
 
 void GLWidget::initializeGL()
@@ -168,6 +171,12 @@ void GLWidget::initializeGL()
     // Set uniforms for vid shaders along with other stream details when first
     // frame comes through
 
+
+    if(m_vidPipelines.size() != m_videoLoc.size())
+    {
+        qCritical() << "GLWidget: initVideo must be called before intialiseGL";
+        return;
+    }
 
     // Create entry in tex info vector for all pipelines
     for(int vidIx = 0; vidIx < this->m_vidPipelines.size(); vidIx++)
@@ -416,14 +425,14 @@ void GLWidget::newFrame(int vidIx)
         // Load the gst buf into a texture
         if(this->m_vidTextures[vidIx].texInfoValid == false)
         {
-            PIPELINE_DEBUG("GLWidget: Received first frame of vid %d", vidIx);
+            PIPELINE_DEBUG("GLWidget: Setting up texture info for vid %d", vidIx);
 
             // Try and keep this fairly portable to other media frameworks by
             // leaving info extraction within pipeline class
             this->m_vidTextures[vidIx].width = pipeline->getWidth();
             this->m_vidTextures[vidIx].height = pipeline->getHeight();
             this->m_vidTextures[vidIx].colourFormat = pipeline->getColourFormat();
-            this->m_vidTextures[vidIx].texInfoValid = true;
+        //    this->m_vidTextures[vidIx].texInfoValid = true;
 
             setAppropriateVidShader(vidIx);
 
@@ -450,7 +459,7 @@ void GLWidget::newFrame(int vidIx)
             this->m_vidTextures[vidIx].triStripVertices[3]       = QVector2D(VIDTEXTURE_LEFT_X, VIDTEXTURE_BOT_Y);
         }
 
-        loadNewTexture(vidIx);
+        this->m_vidTextures[vidIx].texInfoValid = loadNewTexture(vidIx);
 
 #ifdef ENABLE_YUV_WINDOW
         if((vidIx == 0) && (m_yuvWindow->isVisible()))
@@ -483,8 +492,10 @@ void GLWidget::newFrame(int vidIx)
     }
 }
 
-void GLWidget::loadNewTexture(int vidIx)
+bool GLWidget::loadNewTexture(int vidIx)
 {
+    bool texLoaded = false;
+
     glBindTexture (GL_RECT_VID_TEXTURE_2D, this->m_vidTextures[vidIx].texId);
 
     switch(this->m_vidTextures[vidIx].colourFormat)
@@ -495,6 +506,7 @@ void GLWidget::loadNewTexture(int vidIx)
                        this->m_vidTextures[vidIx].height*1.5f,
                        0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
                        this->m_vidPipelines[vidIx]->bufToVidDataStart(this->m_vidTextures[vidIx].buffer));
+        texLoaded = true;
         break;
     case ColFmt_UYVY:
         glTexImage2D  (GL_RECT_VID_TEXTURE_2D, 0, GL_LUMINANCE,
@@ -502,11 +514,14 @@ void GLWidget::loadNewTexture(int vidIx)
                        this->m_vidTextures[vidIx].height,
                        0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
                        this->m_vidPipelines[vidIx]->bufToVidDataStart(this->m_vidTextures[vidIx].buffer));
+        texLoaded = true;
         break;
     default:
         qCritical("Decide how to load texture for colour format %d", this->m_vidTextures[vidIx].colourFormat);
         break;
     }
+
+    return texLoaded;
 }
 
 void GLWidget::pipelineFinished(int vidIx)

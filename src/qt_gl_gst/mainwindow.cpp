@@ -15,6 +15,8 @@ MainWindow::MainWindow(int argc, char *argv[], QWidget *parent) :
 #else
     GLWidget *glWidget = new GLWidget(argc, argv, this);
 #endif
+    glWidget->initVideo();
+
     ControlsForm *controlsForm = new ControlsForm(glWidget, this);
     setCentralWidget(controlsForm);
 }

@@ -2,7 +2,7 @@
 #define GLWIDGET_H
 
 #define ENABLE_YUV_WINDOW       1
-//#define ENABLE_FRAME_COUNT_DEBUG 1
+#define ENABLE_FRAME_COUNT_DEBUG 1
 
 #include <QApplication>
 #include <QGLWidget>
@@ -131,6 +131,8 @@ public:
     explicit GLWidget(int argc, char *argv[], QWidget *parent = 0);
     ~GLWidget();
 
+    virtual void initVideo();
+
     QSize minimumSizeHint() const;
     QSize sizeHint() const;
 
@@ -175,7 +177,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
     void keyPressEvent(QKeyEvent *e);
     void closeEvent(QCloseEvent* event);
-    virtual void loadNewTexture(int vidIx);
+    virtual bool loadNewTexture(int vidIx);
 
     QVector<QString> m_videoLoc;
     QVector<Pipeline*> m_vidPipelines;

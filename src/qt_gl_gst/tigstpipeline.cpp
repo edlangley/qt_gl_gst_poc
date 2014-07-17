@@ -10,6 +10,7 @@ TIGStreamerPipeline::TIGStreamerPipeline(int vidIx,
     m_tiaudiodecode(NULL),
     m_videoqueue(NULL)
 {
+    qDebug("TIGStreamerPipeline constructor entered");
 }
 
 TIGStreamerPipeline::~TIGStreamerPipeline()
@@ -18,6 +19,8 @@ TIGStreamerPipeline::~TIGStreamerPipeline()
 
 void TIGStreamerPipeline::Configure()
 {
+    qDebug("TIGStreamerPipeline::Configure entered");
+
     gst_init (NULL, NULL);
 
     /* Create the elements */
@@ -116,7 +119,7 @@ void TIGStreamerPipeline::on_new_pad(GstElement *element,
 
     // DEBUG:
     const gchar *checkName = gst_structure_get_name (str);
-    qDebug("New pad on qtdemux, pad caps structure name: %s", checkName);
+    qDebug("TIGStreamerPipeline::on_new_pad: New pad on qtdemux, pad caps structure name: %s", checkName);
 
     if (g_strrstr (gst_structure_get_name (str), "video"))
     {
@@ -128,10 +131,12 @@ void TIGStreamerPipeline::on_new_pad(GstElement *element,
                       "sync", TRUE,
                       "signal-handoffs", TRUE,
                       NULL);
+#if 0
         g_signal_connect (p->m_videosink,
                           "preroll-handoff",
                           G_CALLBACK(on_gst_buffer),
                           p);
+#endif
         g_signal_connect (p->m_videosink,
                           "handoff",
                           G_CALLBACK(on_gst_buffer),

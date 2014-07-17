@@ -12,7 +12,11 @@
 GLPowerVRWidget::GLPowerVRWidget(int argc, char *argv[], QWidget *parent) :
     GLWidget(argc, argv, parent)
 {
-
+    if(CMEM_init() == -1)
+    {
+        qCritical("Error calling CMEM_init");
+        close();
+    }
 }
 
 GLPowerVRWidget::~GLPowerVRWidget()
@@ -108,9 +112,13 @@ int GLPowerVRWidget::totalVidBuffers()
     return total;
 }
 
-void GLPowerVRWidget::loadNewTexture(int vidIx)
+bool GLPowerVRWidget::loadNewTexture(int vidIx)
 {
+    bool texLoaded = false;
+
     unsigned long currentVidBufferAddress = (unsigned long)CMEM_getPhys(this->m_vidPipelines[vidIx]->bufToVidDataStart(this->m_vidTextures[vidIx].buffer));
+
+    PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, CMEM phys=%lx", vidIx, currentVidBufferAddress);
 
     if(!m_vidBufferAddressesSet[vidIx])
     {
@@ -120,7 +128,8 @@ void GLPowerVRWidget::loadNewTexture(int vidIx)
             if(bufPtr->pa == currentVidBufferAddress)
             {
                 // Already recorded this buffer address
-                return;
+                PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, already saved phys addr %lx", vidIx, currentVidBufferAddress);
+                return false;
             }
         }
 
@@ -140,11 +149,14 @@ void GLPowerVRWidget::loadNewTexture(int vidIx)
             break;
         }
         bc_buf.pa = currentVidBufferAddress;
+        PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, saving bc_buf_ptr_t: index=%d, size=%d, pa=%lx", vidIx, bc_buf.index, bc_buf.size, bc_buf.pa);
         m_vidBufferAddresses[vidIx].push_back(bc_buf);
 
         // Have we got all the buffer addresses we are waiting for?
         if(m_vidBufferAddresses[vidIx].size() >= NUM_OUTPUT_BUFS_PER_VID)
         {
+            PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture got all the bc_buf_ptr_t entries for vid %d", vidIx);
+
             // We now definitely have the size information needed to prep the driver:
             bc_buf_params_t bufParams;
             bufParams.count = NUM_OUTPUT_BUFS_PER_VID;
@@ -163,23 +175,25 @@ void GLPowerVRWidget::loadNewTexture(int vidIx)
             bufParams.fourcc = this->m_vidPipelines[vidIx]->getFourCC();
             bufParams.type = BC_MEMORY_USERPTR;
 
+            PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, calling BCIOREQ_BUFFERS", vidIx);
             if (ioctl(m_bcFds[vidIx], BCIOREQ_BUFFERS, &bufParams) != 0)
             {
                 qCritical("ERROR: BCIOREQ_BUFFERS failed");
-                return;
+                return false;
             }
 
+            PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, calling BCIOGET_BUFFERCOUNT", vidIx);
             BCIO_package ioctlVar;
             if (ioctl(m_bcFds[vidIx], BCIOGET_BUFFERCOUNT, &ioctlVar) != 0)
             {
                 qCritical("ERROR: BCIOGET_BUFFERCOUNT failed");
-                return;
+                return false;
             }
 
             if (ioctlVar.output == 0)
             {
                 qCritical("ERROR: no texture buffers available");
-                return;
+                return false;
             }
 
 
@@ -217,26 +231,31 @@ void GLPowerVRWidget::loadNewTexture(int vidIx)
             //glTexParameterf(GL_TEXTURE_STREAM_IMG, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
             m_vidBufferAddressesSet[vidIx] = true;
+            texLoaded = true;
         }
 
     }
     else
     {
+        PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, looking up bc_buf_ptr_t index", vidIx);
+
         QVector<bc_buf_ptr_t>::iterator bufPtr;
         for(bufPtr = m_vidBufferAddresses[vidIx].begin(); bufPtr != m_vidBufferAddresses[vidIx].end(); ++bufPtr)
         {
             if(bufPtr->pa == currentVidBufferAddress)
             {
+                PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, setting texture to bc_buf_ptr_t index %d", vidIx, bufPtr->index);
                 m_currentTexIx[vidIx] = bufPtr->index;
                 break;
             }
         }
 
-
         glBindTexture(GL_TEXTURE_STREAM_IMG, this->m_vidTextures[vidIx].texId);
         glTexBindStreamIMG(GL_TEXTURE_STREAM_IMG, bufPtr->index);
+        texLoaded = true;
     }
 
+    return texLoaded;
 }
 
 #endif
