@@ -15,10 +15,10 @@ mediump vec4 yuv2rgb()
 	mediump vec4 rgb;
 	mediump vec2 v2texcoord = v_texCoord.xy;
 
-	texCoord.x = v2texcoord.x * u_yWidth;
-	texCoord.y = v2texcoord.y * u_yHeight;
+	v2texcoord.x = v2texcoord.x * u_yWidth;
+	v2texcoord.y = v2texcoord.y * u_yHeight;
 
-	rgb = textureStreamIMG(v2texcoord, texcoord);
+	rgb = textureStreamIMG(u_vidTexture, v2texcoord);
 
 	return rgb;
 }
