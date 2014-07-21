@@ -22,7 +22,8 @@ SOURCES += \
     shaderlists.cpp \
     mainwindow.cpp \
     yuvdebugwindow.cpp \
-    controlsform.cpp
+    controlsform.cpp \
+    applogger.cpp
 
 HEADERS  += \
     glwidget.h \
@@ -33,7 +34,8 @@ HEADERS  += \
     shaderlists.h \
     mainwindow.h \
     yuvdebugwindow.h \
-    controlsform.h
+    controlsform.h \
+    applogger.h
 
 FORMS += \
     controlsform.ui

@@ -2,7 +2,7 @@
 #define GLWIDGET_H
 
 #define ENABLE_YUV_WINDOW       1
-#define ENABLE_FRAME_COUNT_DEBUG 1
+//#define ENABLE_FRAME_COUNT_DEBUG 1
 
 #include <QApplication>
 #include <QGLWidget>

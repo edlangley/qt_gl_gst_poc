@@ -1,6 +1,7 @@
 #include <QMainWindow>
 #include "glwidget.h"
 #include "shaderlists.h"
+#include "applogger.h"
 
 #ifdef GLU_NEEDED
  #include "GL/glu.h"
@@ -12,6 +13,8 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     m_closing(false),
     m_brickProg(this)
 {
+    LOG(LOG_GL, Logger::Debug2, "GLWidget constructor entered");
+
     m_xRot = 0;
     m_yRot = 0;
     m_zRot = 0;
