@@ -1,19 +1,62 @@
 
 
 #include "model.h"
+#include "applogger.h"
 
-
+class myStream :
+    public Assimp::LogStream
+{
+public:
+    // Constructor
+    myStream()
+    {
+        // empty
+    }
+    // Destructor
+    ~myStream()
+    {
+        // empty
+    }
+    // Write womethink using your own functionality
+    void write(const char* message)
+    {
+        QString alteredMessage(message);
+        alteredMessage.remove('\n');
+        Logger::LogLevel currentLogLevel = GlobalLog.GetModuleLogLevel(LOG_OBJLOADER);
+        GlobalLog.LogMessage(LOG_OBJLOADER, currentLogLevel, alteredMessage.toUtf8().constData());
+    }
+};
 
 Model::Model()
 {
     m_scene = NULL;
 
-    struct aiLogStream stream = aiGetPredefinedLogStream(aiDefaultLogStream_STDOUT, NULL);
-    aiAttachLogStream(&stream);
+    Logger::LogLevel currentLogLevel = GlobalLog.GetModuleLogLevel(LOG_OBJLOADER);
+    int assimpLogSeverity = 0;
+    switch(currentLogLevel)
+    {
+    // deliberate fall through:
+    case Logger::Debug2:
+        assimpLogSeverity |= Assimp::Logger::DEBUGGING;
+    case Logger::Debug1:
+    case Logger::Info:
+        assimpLogSeverity |= Assimp::Logger::INFO;
+    case Logger::Warning:
+        assimpLogSeverity |= Assimp::Logger::WARN;
+    case Logger::Error:
+        assimpLogSeverity |= Assimp::Logger::ERR;
+        break;
+    default:
+        break;
+    }
 
-    //stream = aiGetPredefinedLogStream(aiDefaultLogStream_FILE,"assimp_log.txt");
-    //aiAttachLogStream(&stream);
+    // Create a logger instance
+    Assimp::DefaultLogger::create("", Assimp::Logger::VERBOSE);
 
+    // Attach our custom stream to the default logger
+    Assimp::DefaultLogger::get()->attachStream( new myStream(), assimpLogSeverity );
+
+    Assimp::DefaultLogger::get()->info("this is my info-call");
 }
 
 Model::~Model()
@@ -105,7 +148,7 @@ void Model::aiNodesToVertexArrays()
 
                 if(currentFace->mNumIndices != 3)
                 {
-                    qDebug ("Ignoring non-triangle mesh %d face %d\n", meshIx, faceIx);
+                   LOG(LOG_OBJLOADER, Logger::Info, "Ignoring non-triangle mesh %d face %d\n", meshIx, faceIx);
                 }
 
 
@@ -155,7 +198,7 @@ int Model::Load(QString fileName)
 
     if (!m_scene)
     {
-        qCritical() << "Couldn't load obj model file " << fileName;
+        LOG(LOG_OBJLOADER, Logger::Error, "Couldn't load obj model file %s", fileName.toUtf8().constData());
         return -1;
     }
 
@@ -178,7 +221,7 @@ void Model::SetScale(qreal boundarySize)
 {
     if (!m_scene)
     {
-        qCritical() << "Model file not loaded yet";
+        LOG(LOG_OBJLOADER, Logger::Warning, "Model file not loaded yet");
         return;
     }
 
@@ -193,7 +236,7 @@ void Model::Draw(QMatrix4x4 modelViewMatrix, QMatrix4x4 projectionMatrix, QGLSha
 {
     if (!m_scene)
     {
-        qCritical() << "Model file not loaded yet";
+        LOG(LOG_OBJLOADER, Logger::Warning, "Model file not loaded yet");
         return;
     }
 

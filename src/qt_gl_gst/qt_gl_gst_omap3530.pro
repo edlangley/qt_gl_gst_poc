@@ -24,7 +24,7 @@ SOURCES += main.cpp \
     yuvdebugwindow.cpp \
     controlsform.cpp \
     glpowervrwidget.cpp \
-    logger.cpp
+    applogger.cpp
 
 HEADERS  += mainwindow.h \
     glwidget.h \
@@ -37,7 +37,7 @@ HEADERS  += mainwindow.h \
     yuvdebugwindow.h \
     controlsform.h \
     glpowervrwidget.h \
-    logger.h
+    applogger.h
 
 FORMS += \
     controlsform.ui

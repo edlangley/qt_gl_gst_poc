@@ -2,11 +2,7 @@
 #define PIPELINE_H
 
 #include <QWidget>
-
 #include "asyncwaitingqueue.h"
-
-#define ENABLE_PIPELINE_DEBUG       0
-#define PIPELINE_DEBUG(x...)        do { if (ENABLE_PIPELINE_DEBUG) qDebug(x); } while (0)
 
 
 typedef enum _ColFormat

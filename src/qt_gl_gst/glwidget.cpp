@@ -13,7 +13,7 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     m_closing(false),
     m_brickProg(this)
 {
-    LOG(LOG_GL, Logger::Debug2, "GLWidget constructor entered");
+    LOG(LOG_GL, Logger::Debug1, "GLWidget constructor entered");
 
     m_xRot = 0;
     m_yRot = 0;
@@ -78,7 +78,7 @@ GLWidget::GLWidget(int argc, char *argv[], QWidget *parent) :
     {
         m_dataFilesDir += "/";
     }
-    qDebug("m_dataFilesDir = %s", m_dataFilesDir.toUtf8().constData());
+    LOG(LOG_GL, Logger::Debug1, "m_dataFilesDir = %s", m_dataFilesDir.toUtf8().constData());
 }
 
 GLWidget::~GLWidget()
@@ -94,7 +94,7 @@ void GLWidget::initVideo()
 
         if(this->m_vidPipelines[vidIx] == NULL)
         {
-            qCritical("Error creating pipeline for vid %d", vidIx);
+            LOG(LOG_GL, Logger::Error, "Error creating pipeline for vid %d", vidIx);
             return;
         }
 
@@ -110,7 +110,7 @@ void GLWidget::initVideo()
 void GLWidget::initializeGL()
 {
     QString verStr((const char*)glGetString(GL_VERSION));
-    qDebug("GL_VERSION: %s", verStr.toUtf8().constData());
+    LOG(LOG_GL, Logger::Info, "GL_VERSION: %s", verStr.toUtf8().constData());
 
     QStringList verNums = verStr.split(QRegExp("[ .]"));
     bool foundVerNum = false;
@@ -121,7 +121,7 @@ void GLWidget::initializeGL()
         {
             if(verNum < 2)
             {
-                qCritical("Support for OpenGL 2.0 is required for this demo...exiting\n");
+                LOG(LOG_GL, Logger::Error, "Support for OpenGL 2.0 is required for this demo...exiting");
                 close();
             }
             break;
@@ -129,10 +129,10 @@ void GLWidget::initializeGL()
     }
     if(!foundVerNum)
     {
-        qCritical("Couldn't find OpenGL version number\n");
+        LOG(LOG_GL, Logger::Error, "Couldn't find OpenGL version number");
     }
 
-    qDebug("Window is%s double buffered", ((this->format().doubleBuffer()) ? "": " not"));
+    LOG(LOG_GL, Logger::Debug1, "Window is%s double buffered", ((this->format().doubleBuffer()) ? "": " not"));
 
     qglClearColor(QColor(Qt::black));
 
@@ -177,7 +177,7 @@ void GLWidget::initializeGL()
 
     if(m_vidPipelines.size() != m_videoLoc.size())
     {
-        qCritical() << "GLWidget: initVideo must be called before intialiseGL";
+        LOG(LOG_GL, Logger::Error, "initVideo must be called before intialiseGL");
         return;
     }
 
@@ -189,9 +189,7 @@ void GLWidget::initializeGL()
         newInfo.texInfoValid = false;
         newInfo.buffer = NULL;
         newInfo.effect = VidShaderNoEffect;
-#ifdef ENABLE_FRAME_COUNT_DEBUG
         newInfo.frameCount = 0;
-#endif
 
         this->m_vidTextures.push_back(newInfo);
     }
@@ -199,7 +197,8 @@ void GLWidget::initializeGL()
     m_model = new Model();
     if(m_model->Load(m_dataFilesDir + DFLT_OBJ_MODEL_FILE_NAME) != 0)
     {
-        qCritical() << "Couldn't load obj model file " << m_dataFilesDir + DFLT_OBJ_MODEL_FILE_NAME;
+        LOG(LOG_OBJLOADER, Logger::Warning, "Couldn't load obj model file %s%s",
+            m_dataFilesDir.toUtf8().constData(), DFLT_OBJ_MODEL_FILE_NAME);
     }
     m_model->SetScale(MODEL_BOUNDARY_SIZE);
 
@@ -395,9 +394,8 @@ void GLWidget::newFrame(int vidIx)
 {
     if(this->m_vidPipelines[vidIx])
     {
-#ifdef ENABLE_FRAME_COUNT_DEBUG
-        qDebug("GLWidget: vid %d frame %d", vidIx, this->m_vidTextures[vidIx].frameCount++);
-#endif
+        LOG(LOG_VIDPIPELINE, Logger::Debug2, "vid %d frame %d",
+            vidIx, this->m_vidTextures[vidIx].frameCount++);
 
         Pipeline *pipeline = this->m_vidPipelines[vidIx];
 
@@ -407,7 +405,8 @@ void GLWidget::newFrame(int vidIx)
         if(this->m_vidTextures[vidIx].buffer)
         {
             pipeline->m_outgoingBufQueue.put(this->m_vidTextures[vidIx].buffer);
-            PIPELINE_DEBUG("GLWidget: vid %d pushed buffer %p to outgoing queue", vidIx, this->m_vidTextures[vidIx].buffer);
+            LOG(LOG_VIDPIPELINE, Logger::Debug2, "vid %d pushed buffer %p to outgoing queue",
+                vidIx, this->m_vidTextures[vidIx].buffer);
         }
 
         void *newBuf = NULL;
@@ -421,14 +420,15 @@ void GLWidget::newFrame(int vidIx)
             return;
         }
 
-        PIPELINE_DEBUG("GLWidget: vid %d popped buffer %p from incoming queue", vidIx, this->m_vidTextures[vidIx].buffer);
+        LOG(LOG_VIDPIPELINE, Logger::Debug2, "vid %d popped buffer %p from incoming queue",
+            vidIx, this->m_vidTextures[vidIx].buffer);
 
         this->makeCurrent();
 
         // Load the gst buf into a texture
         if(this->m_vidTextures[vidIx].texInfoValid == false)
         {
-            PIPELINE_DEBUG("GLWidget: Setting up texture info for vid %d", vidIx);
+            LOG(LOG_VIDPIPELINE, Logger::Debug1, "Setting up texture info for vid %d", vidIx);
 
             // Try and keep this fairly portable to other media frameworks by
             // leaving info extraction within pipeline class
@@ -520,7 +520,8 @@ bool GLWidget::loadNewTexture(int vidIx)
         texLoaded = true;
         break;
     default:
-        qCritical("Decide how to load texture for colour format %d", this->m_vidTextures[vidIx].colourFormat);
+        LOG(LOG_GL, Logger::Error, "Decide how to load texture for colour format %d",
+            this->m_vidTextures[vidIx].colourFormat);
         break;
     }
 
@@ -529,9 +530,7 @@ bool GLWidget::loadNewTexture(int vidIx)
 
 void GLWidget::pipelineFinished(int vidIx)
 {
-#ifdef ENABLE_FRAME_COUNT_DEBUG
     this->m_vidTextures[vidIx].frameCount = 0;
-#endif
 
     if(this->m_closing)
     {
@@ -573,7 +572,7 @@ void GLWidget::pipelineFinished(int vidIx)
 
         if(this->m_vidPipelines[vidIx] == NULL)
         {
-            qCritical("Error creating pipeline for vid %d", vidIx);
+            LOG(LOG_GL, Logger::Error, "Error creating pipeline for vid %d", vidIx);
             return;
         }
 
@@ -702,7 +701,7 @@ void GLWidget::loadModelSlot()
     {
         if(m_model->Load(objFileName) != 0)
         {
-            qCritical() << "Couldn't load obj model file " << objFileName;
+            LOG(LOG_GL, Logger::Error, "Couldn't load obj model file %s", objFileName.toUtf8().constData());
         }
         m_model->SetScale(MODEL_BOUNDARY_SIZE);
     }
@@ -1048,8 +1047,8 @@ void GLWidget::setAppropriateVidShader(int vidIx)
         break;
 #endif
     default:
-        qCritical ("Haven't implemented a shader for colour format %d yet, or its not enabled in the build",
-                   this->m_vidTextures[vidIx].colourFormat);
+        LOG(LOG_GL, Logger::Error, "Haven't implemented a shader for colour format %d yet, or its not enabled in the build",
+            this->m_vidTextures[vidIx].colourFormat);
         break;
     }
 }
@@ -1123,7 +1122,7 @@ void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
         break;
 
     default:
-        qDebug ("Invalid effect set on vidIx %d", vidIx);
+        LOG(LOG_GLSHADERS, Logger::Warning, "Invalid effect set on vidIx %d", vidIx);
         break;
     }
 }
@@ -1136,7 +1135,7 @@ int GLWidget::loadShaderFile(QString fileName, QString &shaderSource)
     QFile file(fileName);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
-        qCritical("File '%s' does not exist!", qPrintable(fileName));
+        LOG(LOG_GLSHADERS, Logger::Error, "File '%s' does not exist!", qPrintable(fileName));
         return -1;
     }
 
@@ -1154,16 +1153,22 @@ int GLWidget::setupShader(QGLShaderProgram *prog, GLShaderModule shaderList[], i
 {
     bool ret;
 
-    qDebug ("Setting up a shader:");
+    LOG(LOG_GLSHADERS, Logger::Debug1, "-- Setting up a new full shader: --");
 
     QString shaderSource;
+    QString shaderSourceFileNames;
+    QString fullShaderSourceFileNames;
     for(int listIx = 0; listIx < listLen; listIx++)
     {
         if(shaderList[listIx].type == QGLShader::Vertex)
         {
             QString nextShaderSource;
 
-            qDebug ("concatenating %s", shaderList[listIx].sourceFileName);
+            LOG(LOG_GLSHADERS, Logger::Debug1, "concatenating %s", shaderList[listIx].sourceFileName);
+            shaderSourceFileNames += shaderList[listIx].sourceFileName;
+            shaderSourceFileNames += ", ";
+            fullShaderSourceFileNames += shaderList[listIx].sourceFileName;
+            fullShaderSourceFileNames += ", ";
 
             ret = loadShaderFile(shaderList[listIx].sourceFileName, nextShaderSource);
             if(ret != 0)
@@ -1177,20 +1182,21 @@ int GLWidget::setupShader(QGLShaderProgram *prog, GLShaderModule shaderList[], i
 
     if(!shaderSource.isEmpty())
     {
-        qDebug ("compiling vertex shader");
+        LOG(LOG_GLSHADERS, Logger::Debug1, "compiling vertex shader");
 
         ret = prog->addShaderFromSourceCode(QGLShader::Vertex, shaderSource);
-#if 0
+
         if(ret == false)
         {
-            qCritical() << "Compile log for shader " << shaderList[listIx].sourceFileName
-                        << ":\n" << prog->log();
+            LOG(LOG_GLSHADERS, Logger::Error, "Compile log for vertex shader sources %s:\n%s\n",
+                shaderSourceFileNames.toUtf8().constData(),
+                prog->log().toUtf8().constData());
             return -1;
         }
-#endif
     }
 
     shaderSource.clear();
+    shaderSourceFileNames.clear();
 
     for(int listIx = 0; listIx < listLen; listIx++)
     {
@@ -1198,7 +1204,11 @@ int GLWidget::setupShader(QGLShaderProgram *prog, GLShaderModule shaderList[], i
         {
             QString nextShaderSource;
 
-            qDebug ("concatenating %s", shaderList[listIx].sourceFileName);
+            LOG(LOG_GLSHADERS, Logger::Debug1, "concatenating %s", shaderList[listIx].sourceFileName);
+            shaderSourceFileNames += shaderList[listIx].sourceFileName;
+            shaderSourceFileNames += ", ";
+            fullShaderSourceFileNames += shaderList[listIx].sourceFileName;
+            fullShaderSourceFileNames += ", ";
 
             ret = loadShaderFile(shaderList[listIx].sourceFileName, nextShaderSource);
             if(ret != 0)
@@ -1212,34 +1222,33 @@ int GLWidget::setupShader(QGLShaderProgram *prog, GLShaderModule shaderList[], i
 
     if(!shaderSource.isEmpty())
     {
-        qDebug ("compiling fragment shader");
+        LOG(LOG_GLSHADERS, Logger::Debug1, "compiling fragment shader");
 
         ret = prog->addShaderFromSourceCode(QGLShader::Fragment, shaderSource);
-#if 0
+
         if(ret == false)
         {
-            qCritical() << "Compile log for shader " << shaderList[listIx].sourceFileName
-                        << ":\n" << prog->log();
+            LOG(LOG_GLSHADERS, Logger::Error, "Compile log for fragment shader sources %s:\n%s\n",
+                shaderSourceFileNames.toUtf8().constData(),
+                prog->log().toUtf8().constData());
             return -1;
         }
-#endif
     }
 
     ret = prog->link();
     if(ret == false)
     {
-        qCritical() << "Link log for shaders ";
-        for(int listIx = 0; listIx < listLen; listIx++)
-        {
-            qCritical() << shaderList[listIx].sourceFileName << " ";
-        }
-        qCritical() << "\n" << prog->log();
+        LOG(LOG_GLSHADERS, Logger::Error, "Link log for shader sources %s:\n%s\n",
+            fullShaderSourceFileNames.toUtf8().constData(),
+            prog->log().toUtf8().constData());
         return -1;
     }
 
     ret = prog->bind();
     if(ret == false)
     {
+        LOG(LOG_GLSHADERS, Logger::Error, "Error binding shader from sources %s",
+            fullShaderSourceFileNames.toUtf8().constData());
         return -1;
     } 
 
@@ -1261,9 +1270,9 @@ int GLWidget::printOpenGLError(const char *file, int line)
     while (glErr != GL_NO_ERROR)
     {
 #ifdef GLU_NEEDED
-        qCritical() << "glError in file " << file << " @ line " << line << ": " << (const char *)gluErrorString(glErr);
+        LOG(LOG_GL, Logger::Error, "glError in file %s:%d : %s", file, line, (const char *)gluErrorString(glErr));
 #else
-        qCritical() << "glError in file " << file << " @ line " << line << ": " << glErr;
+        LOG(LOG_GL, Logger::Error, "glError in file %s:%d : %d", file, line, glErr);
 #endif
         retCode = 1;
         glErr = glGetError();

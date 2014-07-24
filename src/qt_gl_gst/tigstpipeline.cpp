@@ -1,3 +1,5 @@
+
+#include "applogger.h"
 #include "tigstpipeline.h"
 
 TIGStreamerPipeline::TIGStreamerPipeline(int vidIx,
@@ -10,7 +12,7 @@ TIGStreamerPipeline::TIGStreamerPipeline(int vidIx,
     m_tiaudiodecode(NULL),
     m_videoqueue(NULL)
 {
-    qDebug("TIGStreamerPipeline constructor entered");
+    LOG(LOG_VIDPIPELINE, Logger::Debug1, "constructor entered");
 }
 
 TIGStreamerPipeline::~TIGStreamerPipeline()
@@ -19,7 +21,7 @@ TIGStreamerPipeline::~TIGStreamerPipeline()
 
 void TIGStreamerPipeline::Configure()
 {
-    qDebug("TIGStreamerPipeline::Configure entered");
+    LOG(LOG_VIDPIPELINE, Logger::Debug1, "Configure entered");
 
     gst_init (NULL, NULL);
 
@@ -27,7 +29,7 @@ void TIGStreamerPipeline::Configure()
     this->m_pipeline = gst_pipeline_new (NULL);
     if(this->m_videoLocation.isEmpty())
     {
-        qDebug("No video file specified. Using video test source.");
+        LOG(LOG_VIDPIPELINE, Logger::Info, "No video file specified. Using video test source.");
         this->m_source = gst_element_factory_make ("videotestsrc", "testsrc");
     }
     else
@@ -65,7 +67,9 @@ void TIGStreamerPipeline::Configure()
         this->m_tividdecode == NULL || this->m_tiaudiodecode == NULL ||
         this->m_audioqueue == NULL || this->m_videoqueue == NULL ||
         this->m_videosink == NULL)// || this->m_audiosink == NULL)
-        g_critical ("One of the GStreamer decoding elements is missing");
+    {
+        LOG(LOG_VIDPIPELINE, Logger::Error, "One of the GStreamer decoding elements is missing");
+    }
 
     /* Setup the pipeline */
     gst_bin_add_many (GST_BIN(this->m_pipeline), this->m_source, this->m_qtdemux, this->m_tividdecode,
@@ -90,7 +94,7 @@ void TIGStreamerPipeline::Configure()
             NULL);
     if(!gst_element_link_filtered (this->m_tividdecode, this->m_videosink, caps))
     {
-        qCritical("Failed to link viddecode and videosink");
+        LOG(LOG_VIDPIPELINE, Logger::Error, "Failed to link viddecode and videosink");
     }
     gst_caps_unref (caps);
 #else
@@ -119,11 +123,11 @@ void TIGStreamerPipeline::on_new_pad(GstElement *element,
 
     // DEBUG:
     const gchar *checkName = gst_structure_get_name (str);
-    qDebug("TIGStreamerPipeline::on_new_pad: New pad on qtdemux, pad caps structure name: %s", checkName);
+    LOG(LOG_VIDPIPELINE, Logger::Debug1, "New pad on qtdemux, pad caps structure name: %s", checkName);
 
     if (g_strrstr (gst_structure_get_name (str), "video"))
     {
-        qDebug("Pad is for video");
+        LOG(LOG_VIDPIPELINE, Logger::Debug1, "Pad is for video");
 
         sinkpad = gst_element_get_pad (p->m_videoqueue, "sink");
 
@@ -145,7 +149,7 @@ void TIGStreamerPipeline::on_new_pad(GstElement *element,
     }
     else
     {
-        qDebug("Pad is for audio, ignoring for now");
+        LOG(LOG_VIDPIPELINE, Logger::Debug1, "Pad is for audio, ignoring for now");
         gst_caps_unref (caps);
         return;
 

@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 
+#include "applogger.h"
 #include "glpowervrwidget.h"
 #include "cmem.h"
 
@@ -14,7 +15,7 @@ GLPowerVRWidget::GLPowerVRWidget(int argc, char *argv[], QWidget *parent) :
 {
     if(CMEM_init() == -1)
     {
-        qCritical("Error calling CMEM_init");
+        LOG(LOG_GL, Logger::Error, "Error calling CMEM_init");
         close();
     }
 }
@@ -31,13 +32,13 @@ void GLPowerVRWidget::initializeGL()
 
     if (!(glExtCStr = glGetString(GL_EXTENSIONS)))
     {
-        qCritical("Can't get GLES 2.0 extensions");
+        LOG(LOG_GL, Logger::Error, "Can't get GLES 2.0 extensions");
         close();
     }
 
     if (!strstr((char *)glExtCStr, "GL_IMG_texture_stream2"))
     {
-        qCritical("GL_IMG_texture_stream2 extension not present");
+        LOG(LOG_GL, Logger::Error, "GL_IMG_texture_stream2 extension not present");
         close();
     }
 
@@ -47,7 +48,7 @@ void GLPowerVRWidget::initializeGL()
 
     if (!glTexBindStreamIMG || !glGetTexAttrIMG || !glGetTexDeviceIMG)
     {
-        qCritical("Couldn't get pointers to IMG extension functions");
+        LOG(LOG_GL, Logger::Error, "Couldn't get pointers to IMG extension functions");
         close();
     }
 }
@@ -56,7 +57,7 @@ Pipeline *GLPowerVRWidget::createPipeline(int vidIx)
 {
     if(vidIx > MAX_BCDEV)
     {
-        qCritical("ERROR: vidIx=%d which is greater than bccat devs available", vidIx);
+        LOG(LOG_GL, Logger::Error, "ERROR: vidIx=%d which is greater than bccat devs available", vidIx);
         return NULL;
     }
 
@@ -69,7 +70,7 @@ Pipeline *GLPowerVRWidget::createPipeline(int vidIx)
         QString bcDevName = QString("/dev/bccat%1").arg(vidIx);
         if((bcFd = open(bcDevName.toUtf8().constData(), O_RDWR|O_NDELAY)) == -1)
         {
-            qCritical("ERROR: open %s failed", qPrintable(bcDevName));
+            LOG(LOG_GL, Logger::Error, "ERROR: open %s failed", qPrintable(bcDevName));
             return NULL;
         }
 
@@ -118,7 +119,7 @@ bool GLPowerVRWidget::loadNewTexture(int vidIx)
 
     unsigned long currentVidBufferAddress = (unsigned long)CMEM_getPhys(this->m_vidPipelines[vidIx]->bufToVidDataStart(this->m_vidTextures[vidIx].buffer));
 
-    PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, CMEM phys=%lx", vidIx, currentVidBufferAddress);
+    LOG(LOG_GL, Logger::Debug2, "vid %d, CMEM phys=%lx", vidIx, currentVidBufferAddress);
 
     if(!m_vidBufferAddressesSet[vidIx])
     {
@@ -128,7 +129,7 @@ bool GLPowerVRWidget::loadNewTexture(int vidIx)
             if(bufPtr->pa == currentVidBufferAddress)
             {
                 // Already recorded this buffer address
-                PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, already saved phys addr %lx", vidIx, currentVidBufferAddress);
+                LOG(LOG_GL, Logger::Debug1, "vid %d, already saved phys addr %lx", vidIx, currentVidBufferAddress);
                 return false;
             }
         }
@@ -149,13 +150,13 @@ bool GLPowerVRWidget::loadNewTexture(int vidIx)
             break;
         }
         bc_buf.pa = currentVidBufferAddress;
-        PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, saving bc_buf_ptr_t: index=%d, size=%d, pa=%lx", vidIx, bc_buf.index, bc_buf.size, bc_buf.pa);
+        LOG(LOG_GL, Logger::Debug1, "vid %d, saving bc_buf_ptr_t: index=%d, size=%d, pa=%lx", vidIx, bc_buf.index, bc_buf.size, bc_buf.pa);
         m_vidBufferAddresses[vidIx].push_back(bc_buf);
 
         // Have we got all the buffer addresses we are waiting for?
         if(m_vidBufferAddresses[vidIx].size() >= NUM_OUTPUT_BUFS_PER_VID)
         {
-            PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture got all the bc_buf_ptr_t entries for vid %d", vidIx);
+            LOG(LOG_GL, Logger::Debug1, "got all the bc_buf_ptr_t entries for vid %d", vidIx);
 
             // We now definitely have the size information needed to prep the driver:
             bc_buf_params_t bufParams;
@@ -175,24 +176,24 @@ bool GLPowerVRWidget::loadNewTexture(int vidIx)
             bufParams.fourcc = this->m_vidPipelines[vidIx]->getFourCC();
             bufParams.type = BC_MEMORY_USERPTR;
 
-            PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, calling BCIOREQ_BUFFERS", vidIx);
+            LOG(LOG_GL, Logger::Debug1, "vid %d, calling BCIOREQ_BUFFERS", vidIx);
             if (ioctl(m_bcFds[vidIx], BCIOREQ_BUFFERS, &bufParams) != 0)
             {
-                qCritical("ERROR: BCIOREQ_BUFFERS failed");
+                LOG(LOG_GL, Logger::Error, "ERROR: BCIOREQ_BUFFERS failed");
                 return false;
             }
 
-            PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, calling BCIOGET_BUFFERCOUNT", vidIx);
+            LOG(LOG_GL, Logger::Debug1, "vid %d, calling BCIOGET_BUFFERCOUNT", vidIx);
             BCIO_package ioctlVar;
             if (ioctl(m_bcFds[vidIx], BCIOGET_BUFFERCOUNT, &ioctlVar) != 0)
             {
-                qCritical("ERROR: BCIOGET_BUFFERCOUNT failed");
+                LOG(LOG_GL, Logger::Error, "ERROR: BCIOGET_BUFFERCOUNT failed");
                 return false;
             }
 
             if (ioctlVar.output == 0)
             {
-                qCritical("ERROR: no texture buffers available");
+                LOG(LOG_GL, Logger::Error, "ERROR: no texture buffers available");
                 return false;
             }
 
@@ -201,8 +202,8 @@ bool GLPowerVRWidget::loadNewTexture(int vidIx)
             {
                 if (ioctl(m_bcFds[vidIx], BCIOSET_BUFFERPHYADDR, bufPtr) != 0)
                 {
-                    qCritical("ERROR: BCIOSET_BUFFERADDR[%d]: failed (0x%lx)\n",
-                           bufPtr->index, bufPtr->pa);
+                    LOG(LOG_GL, Logger::Error, "ERROR: BCIOSET_BUFFERADDR[%d]: failed (0x%lx)\n",
+                        bufPtr->index, bufPtr->pa);
                 }
             }
 
@@ -216,7 +217,7 @@ bool GLPowerVRWidget::loadNewTexture(int vidIx)
             this->glGetTexAttrIMG(vidIx, GL_TEXTURE_STREAM_DEVICE_HEIGHT_IMG, &imgBufHeight);
             this->glGetTexAttrIMG(vidIx, GL_TEXTURE_STREAM_DEVICE_FORMAT_IMG, &imgBufFmt);
 
-            qDebug("GLES IMG attrs: dev name: %d, numbufs=%d, width=%d, height=%d, format=%d",
+            LOG(LOG_GL, Logger::Debug1, "GLES IMG attrs: dev name: %d, numbufs=%d, width=%d, height=%d, format=%d",
                    imgDevName, numImgBufs, imgBufWidth, imgBufHeight, imgBufFmt);
 
 
@@ -237,14 +238,14 @@ bool GLPowerVRWidget::loadNewTexture(int vidIx)
     }
     else
     {
-        PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, looking up bc_buf_ptr_t index", vidIx);
+        LOG(LOG_GL, Logger::Debug2, "vid %d, looking up bc_buf_ptr_t index", vidIx);
 
         QVector<bc_buf_ptr_t>::iterator bufPtr;
         for(bufPtr = m_vidBufferAddresses[vidIx].begin(); bufPtr != m_vidBufferAddresses[vidIx].end(); ++bufPtr)
         {
             if(bufPtr->pa == currentVidBufferAddress)
             {
-                PIPELINE_DEBUG("GLPowerVRWidget::loadNewTexture vid %d, setting texture to bc_buf_ptr_t index %d", vidIx, bufPtr->index);
+                LOG(LOG_GL, Logger::Debug2, "vid %d, setting texture to bc_buf_ptr_t index %d", vidIx, bufPtr->index);
                 m_currentTexIx[vidIx] = bufPtr->index;
                 break;
             }

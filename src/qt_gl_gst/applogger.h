@@ -18,6 +18,7 @@ public:
 
     Logger();
     void SetModuleLogLevel(unsigned int module, LogLevel level);
+    LogLevel GetModuleLogLevel(unsigned int module);
     void LogMessage(unsigned int module, LogLevel severity, const char* const format, ...);
     void LogMessageWithFuncTrace(unsigned int module, LogLevel severity,
                                  const char* const filename, const char* const function, const int line,

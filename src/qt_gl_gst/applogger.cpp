@@ -16,6 +16,16 @@ void Logger::SetModuleLogLevel(unsigned int module, LogLevel level)
     m_currentLogLevels[module] = level;
 }
 
+Logger::LogLevel Logger::GetModuleLogLevel(unsigned int module)
+{
+    if(m_currentLogLevels.contains(module) == false)
+    {
+        m_currentLogLevels[module] = DEFAULT_LOG_LEVEL;
+    }
+
+    return m_currentLogLevels[module];
+}
+
 void Logger::LogMessage(unsigned int module, LogLevel severity, const char* const format, ...)
 {
 
@@ -76,5 +86,12 @@ void Logger::LogMessageWithFuncTrace(unsigned int module, LogLevel severity,
 
 void Logger::outputMessage(unsigned int module, LogLevel severity, const char * const message)
 {
-    qDebug(message);
+    if(severity <= Logger::Error)
+    {
+        qCritical(message);
+    }
+    else
+    {
+        qDebug(message);
+    }
 }
