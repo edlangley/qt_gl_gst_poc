@@ -4,8 +4,6 @@
 // Re-include base class header here to keep the MOC happy:
 #include "gstpipeline.h"
 
-#define NUM_OUTPUT_BUFS_PER_VID     2//4
-
 class TIGStreamerPipeline : public GStreamerPipeline
 {
     Q_OBJECT

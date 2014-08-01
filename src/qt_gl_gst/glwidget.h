@@ -176,6 +176,7 @@ protected:
     void keyPressEvent(QKeyEvent *e);
     void closeEvent(QCloseEvent* event);
     virtual bool loadNewTexture(int vidIx);
+    int printOpenGLError(const char *file, int line);
 
     QVector<QString> m_videoLoc;
     QVector<Pipeline*> m_vidPipelines;
@@ -187,7 +188,6 @@ private:
     int loadShaderFile(QString fileName, QString &shaderSource);
     int setupShader(QGLShaderProgram *prog, QString baseFileName, bool vertNeeded, bool fragNeeded);
     int setupShader(QGLShaderProgram *prog, GLShaderModule shaderList[], int listLen);
-    int printOpenGLError(const char *file, int line);
     int getCallingGstVecIx(int vidIx);
 
     bool m_closing;

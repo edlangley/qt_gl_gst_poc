@@ -31,8 +31,8 @@ private:
 
     QVector< QVector<bc_buf_ptr_t> > m_vidBufferAddresses;
     QVector<bool> m_vidBufferAddressesSet;
-    QVector<int> m_currentTexIx;
     QVector<int> m_bcFds;
+    QMap<unsigned int, GLuint> m_bcBufIxToTexId;
 
 };
 

@@ -4,22 +4,25 @@
 #include <QWidget>
 #include "asyncwaitingqueue.h"
 
+#define COLFMT_FOUR_CC(a,b,c,d) \
+    ((unsigned long) ((a) | (b)<<8 | (c)<<16 | (d)<<24))
 
 typedef enum _ColFormat
 {
     // these relate to fourCC codes, but abstract video framework system from outside:
-    ColFmt_I420,
-    ColFmt_IYUV,
-    ColFmt_YV12,
-    ColFmt_YUYV,
-    ColFmt_YUY2,
-    ColFmt_V422,
-    ColFmt_YUNV,
-    ColFmt_UYVY,
-    ColFmt_Y422,
-    ColFmt_UYNV,
+    ColFmt_I420 = COLFMT_FOUR_CC('I', '4', '2', '0'),
+    ColFmt_IYUV = COLFMT_FOUR_CC('I', 'Y', 'U', 'V'),
+    ColFmt_YV12 = COLFMT_FOUR_CC('Y', 'V', '1', '2'),
+    ColFmt_YUYV = COLFMT_FOUR_CC('Y', 'U', 'Y', 'V'),
+    ColFmt_YUY2 = COLFMT_FOUR_CC('Y', 'U', 'Y', '2'),
+    ColFmt_V422 = COLFMT_FOUR_CC('V', '4', '2', '2'),
+    ColFmt_YUNV = COLFMT_FOUR_CC('Y', 'U', 'N', 'V'),
+    ColFmt_UYVY = COLFMT_FOUR_CC('U', 'Y', 'V', 'Y'),
+    ColFmt_Y422 = COLFMT_FOUR_CC('Y', '4', '2', '2'),
+    ColFmt_UYNV = COLFMT_FOUR_CC('U', 'Y', 'N', 'V'),
 
-    ColFmt_RGB888,
+    // Also capture RGBs in the same enum
+    ColFmt_RGB888 = COLFMT_FOUR_CC('R', 'G', 'B', '8'),
     ColFmt_BGR888,
     ColFmt_ARGB8888,
     ColFmt_BGRA8888,
@@ -46,7 +49,6 @@ public:
     int getWidth() { return m_width; }
     int getHeight() { return m_height; }
     ColFormat getColourFormat() { return m_colFormat; }
-    quint32 getFourCC() { return m_fourCC; }
     virtual unsigned char *bufToVidDataStart(void *buf) = 0;
 
     bool isFinished() { return this->m_finished; }
@@ -67,7 +69,6 @@ protected:
     int m_width;
     int m_height;
     ColFormat m_colFormat;
-    quint32 m_fourCC;
     bool m_vidInfoValid;
     bool m_finished;
 };
