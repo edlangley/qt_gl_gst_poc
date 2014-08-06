@@ -662,6 +662,9 @@ void GLWidget::cycleVidShaderSlot()
     // but do it to check for errors, so we don't need to check on every render
     // and program output doesn't go mad
     setVidShaderVars(lastVidDrawn, true);
+
+    LOG(LOG_GL, Logger::Debug1, "vid shader for vid %d now set to %d",
+        lastVidDrawn, this->m_vidTextures[lastVidDrawn].effect);
 }
 
 void GLWidget::cycleModelShaderSlot()
@@ -670,15 +673,33 @@ void GLWidget::cycleModelShaderSlot()
         m_currentModelEffectIndex = ModelEffectFirst;
     else
         m_currentModelEffectIndex = (ModelEffectType) ((int) m_currentModelEffectIndex + 1);
+
+    LOG(LOG_GL, Logger::Debug1, "model shader now set to %d", m_currentModelEffectIndex);
 }
 
 void GLWidget::showYUVWindowSlot()
 {
+#ifdef ENABLE_YUV_WINDOW
+ #ifdef HIDE_GL_WHEN_MODAL_OPEN
+    QSize currentSize = this->size();
+    this->resize(0, 0);
+ #endif
+
     m_yuvWindow->show();
+
+ #ifdef HIDE_GL_WHEN_MODAL_OPEN
+    this->resize(currentSize);
+ #endif
+#endif
 }
 
 void GLWidget::loadVideoSlot()
 {
+#ifdef HIDE_GL_WHEN_MODAL_OPEN
+    QSize currentSize = this->size();
+    this->resize(0, 0);
+#endif
+
     int lastVidDrawn = this->m_vidTextures.size() - 1;
 
     QString newFileName = QFileDialog::getOpenFileName(0, "Select a video file",
@@ -690,10 +711,19 @@ void GLWidget::loadVideoSlot()
         //this->m_vidPipelines[lastVidDrawn]->setChooseNewOnFinished();
         this->m_vidPipelines[lastVidDrawn]->Stop();
     }
+
+#ifdef HIDE_GL_WHEN_MODAL_OPEN
+    this->resize(currentSize);
+#endif
 }
 
 void GLWidget::loadModelSlot()
 {
+#ifdef HIDE_GL_WHEN_MODAL_OPEN
+    QSize currentSize = this->size();
+    this->resize(0, 0);
+#endif
+
     // Load a Wavefront OBJ model file. Get the filename before doing anything else
     QString objFileName = QFileDialog::getOpenFileName(0, "Select a Wavefront OBJ file",
                                                           m_dataFilesDir + "models/", "Wavefront OBJ (*.obj)");
@@ -705,10 +735,19 @@ void GLWidget::loadModelSlot()
         }
         m_model->SetScale(MODEL_BOUNDARY_SIZE);
     }
+
+#ifdef HIDE_GL_WHEN_MODAL_OPEN
+    this->resize(currentSize);
+#endif
 }
 
 void GLWidget::loadAlphaSlot()
 {
+#ifdef HIDE_GL_WHEN_MODAL_OPEN
+    QSize currentSize = this->size();
+    this->resize(0, 0);
+#endif
+
     // Load an alpha mask texture. Get the filename before doing anything else
     QString alphaTexFileName = QFileDialog::getOpenFileName(0, "Select an image file",
                                                             m_dataFilesDir + "alphamasks/", "Pictures (*.bmp *.jpg *.jpeg *.gif);;All (*.*)");
@@ -734,6 +773,10 @@ void GLWidget::loadAlphaSlot()
             m_alphaTextureLoaded = true;
         }
     }
+
+#ifdef HIDE_GL_WHEN_MODAL_OPEN
+    this->resize(currentSize);
+#endif
 }
 
 void GLWidget::rotateToggleSlot(bool toggleState)
