@@ -129,12 +129,7 @@ void TIGStreamerPipeline::on_new_pad(GstElement *element,
                       "sync", TRUE,
                       "signal-handoffs", TRUE,
                       NULL);
-#if 0
-        g_signal_connect (p->m_videosink,
-                          "preroll-handoff",
-                          G_CALLBACK(on_gst_buffer),
-                          p);
-#endif
+
         g_signal_connect (p->m_videosink,
                           "handoff",
                           G_CALLBACK(on_gst_buffer),
