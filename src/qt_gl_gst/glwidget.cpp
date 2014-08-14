@@ -247,7 +247,11 @@ void GLWidget::paintEvent(QPaintEvent *event)
         glActiveTexture(GL_RECT_VID_TEXTURE0);
         glBindTexture(GL_RECT_VID_TEXTURE_2D, this->m_vidTextures[0].texId);
 
+#ifdef TEXCOORDS_ALREADY_NORMALISED
+        this->m_vidTextures[0].effect = VidShaderNoEffect;
+#else
         this->m_vidTextures[0].effect = VidShaderNoEffectNormalisedTexCoords;
+#endif
         setAppropriateVidShader(0);
         this->m_vidTextures[0].shader->bind();
         setVidShaderVars(0, false);
@@ -259,7 +263,11 @@ void GLWidget::paintEvent(QPaintEvent *event)
         glActiveTexture(GL_RECT_VID_TEXTURE0);
         glBindTexture(GL_RECT_VID_TEXTURE_2D, this->m_vidTextures[0].texId);
 
+#ifdef TEXCOORDS_ALREADY_NORMALISED
         this->m_vidTextures[0].effect = VidShaderLitNormalisedTexCoords;
+#else
+        this->m_vidTextures[0].effect = VidShaderLitNormalisedTexCoords;
+#endif
         setAppropriateVidShader(0);
         this->m_vidTextures[0].shader->bind();
         setVidShaderVars(0, false);
@@ -446,8 +454,13 @@ void GLWidget::newFrame(int vidIx)
             // and program output doesn't go mad
             setVidShaderVars(vidIx, true);
 
+#ifdef TEXCOORDS_ALREADY_NORMALISED
+            GLfloat vidWidth = 1.0f;
+            GLfloat vidHeight = 1.0f;
+#else
             GLfloat vidWidth = this->m_vidTextures[vidIx].width;
             GLfloat vidHeight = this->m_vidTextures[vidIx].height;
+#endif
 
             this->m_vidTextures[vidIx].triStripTexCoords[0]      = QVector2D(vidWidth, 0.0f);
             this->m_vidTextures[vidIx].triStripVertices[0]       = QVector2D(VIDTEXTURE_RIGHT_X, VIDTEXTURE_TOP_Y);
