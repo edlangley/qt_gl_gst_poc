@@ -1170,11 +1170,17 @@ void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
         this->m_vidTextures[vidIx].shader->setUniformValue("u_yWidth", (GLfloat)this->m_vidTextures[vidIx].width);
         this->m_vidTextures[vidIx].shader->setUniformValue("u_alphaTexture", 1); // texture unit index
         if(printErrors) printOpenGLError(__FILE__, __LINE__);
-
+#ifdef TEXCOORDS_ALREADY_NORMALISED
+        this->m_vidTextures[vidIx].triStripAlphaTexCoords[0] = QVector2D(1.0f, 0.0f);
+        this->m_vidTextures[vidIx].triStripAlphaTexCoords[1] = QVector2D(0.0f, 0.0f);
+        this->m_vidTextures[vidIx].triStripAlphaTexCoords[2] = QVector2D(1.0f, 1.0f);
+        this->m_vidTextures[vidIx].triStripAlphaTexCoords[3] = QVector2D(0.0f, 1.0f);
+#else
         this->m_vidTextures[vidIx].triStripAlphaTexCoords[0] = QVector2D(m_alphaTexWidth, 0.0f);
         this->m_vidTextures[vidIx].triStripAlphaTexCoords[1] = QVector2D(0.0f, 0.0f);
         this->m_vidTextures[vidIx].triStripAlphaTexCoords[2] = QVector2D(m_alphaTexWidth, m_alphaTexHeight);
         this->m_vidTextures[vidIx].triStripAlphaTexCoords[3] = QVector2D(0.0f, m_alphaTexHeight);
+#endif
         break;
 
     default:
