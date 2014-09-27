@@ -66,7 +66,7 @@
 
 #define DATA_DIR_ENV_VAR_NAME   "QTGLGST_DATA_DIR"
 
-#define DFLT_OBJ_MODEL_FILE_NAME    "models/glm-data/sphere.obj"
+#define DFLT_OBJ_MODEL_FILE_NAME    "models/sphere.obj"
 #define MODEL_BOUNDARY_SIZE     2.0f
 
 typedef enum
