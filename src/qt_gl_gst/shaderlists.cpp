@@ -31,6 +31,13 @@ GLShaderModule VidI420NoEffectShaderList[NUM_SHADERS_VIDI420_NOEFFECT] =
     { "shaders/noeffect.frag", QGLShader::Fragment }
 };
 
+GLShaderModule VidI420LitShaderList[NUM_SHADERS_VIDI420_LIT] =
+{
+    { "shaders/yuv2rgbI420"VIDCONV_FRAG_SHADER_SUFFIX".frag", QGLShader::Fragment },
+    { "shaders/vidlighting.vert", QGLShader::Vertex },
+    { "shaders/vidlighting.frag", QGLShader::Fragment }
+};
+
 GLShaderModule VidI420ColourHilightShaderList[NUM_SHADERS_VIDI420_COLOURHILIGHT] =
 {
     { "shaders/yuv2rgbI420"VIDCONV_FRAG_SHADER_SUFFIX".frag", QGLShader::Fragment },
@@ -74,6 +81,13 @@ GLShaderModule VidUYVYNoEffectShaderList[NUM_SHADERS_VIDUYVY_NOEFFECT] =
     { "shaders/yuv2rgbUYVY"VIDCONV_FRAG_SHADER_SUFFIX".frag", QGLShader::Fragment },
     { "shaders/noeffect.vert", QGLShader::Vertex },
     { "shaders/noeffect.frag", QGLShader::Fragment }
+};
+
+GLShaderModule VidUYVYLitShaderList[NUM_SHADERS_VIDUYVY_LIT] =
+{
+    { "shaders/yuv2rgbUYVY"VIDCONV_FRAG_SHADER_SUFFIX".frag", QGLShader::Fragment },
+    { "shaders/vidlighting.vert", QGLShader::Vertex },
+    { "shaders/vidlighting.frag", QGLShader::Fragment }
 };
 
 GLShaderModule VidUYVYColourHilightShaderList[NUM_SHADERS_VIDUYVY_COLOURHILIGHT] =

@@ -152,6 +152,7 @@ void GLWidget::initializeGL()
     setupShader(&m_I420NoEffectNormalised, VidI420NoEffectNormalisedShaderList, NUM_SHADERS_VIDI420_NOEFFECT_NORMALISED);
     setupShader(&m_I420LitNormalised, VidI420LitNormalisedShaderList, NUM_SHADERS_VIDI420_LIT_NORMALISED);
     setupShader(&m_I420NoEffect, VidI420NoEffectShaderList, NUM_SHADERS_VIDI420_NOEFFECT);
+    setupShader(&m_I420Lit, VidI420LitShaderList, NUM_SHADERS_VIDI420_LIT);
     setupShader(&m_I420ColourHilight, VidI420ColourHilightShaderList, NUM_SHADERS_VIDI420_COLOURHILIGHT);
     setupShader(&m_I420ColourHilightSwap, VidI420ColourHilightSwapShaderList, NUM_SHADERS_VIDI420_COLOURHILIGHTSWAP);
     setupShader(&m_I420AlphaMask, VidI420AlphaMaskShaderList, NUM_SHADERS_VIDI420_ALPHAMASK);
@@ -161,6 +162,7 @@ void GLWidget::initializeGL()
     setupShader(&m_UYVYNoEffectNormalised, VidUYVYNoEffectNormalisedShaderList, NUM_SHADERS_VIDUYVY_NOEFFECT_NORMALISED);
     setupShader(&m_UYVYLitNormalised, VidUYVYLitNormalisedShaderList, NUM_SHADERS_VIDUYVY_LIT_NORMALISED);
     setupShader(&m_UYVYNoEffect, VidUYVYNoEffectShaderList, NUM_SHADERS_VIDUYVY_NOEFFECT);
+    setupShader(&m_UYVYLit, VidUYVYLitShaderList, NUM_SHADERS_VIDUYVY_LIT);
     setupShader(&m_UYVYColourHilight, VidUYVYColourHilightShaderList, NUM_SHADERS_VIDUYVY_COLOURHILIGHT);
     setupShader(&m_UYVYColourHilightSwap, VidUYVYColourHilightSwapShaderList, NUM_SHADERS_VIDUYVY_COLOURHILIGHTSWAP);
     setupShader(&m_UYVYAlphaMask, VidUYVYAlphaMaskShaderList, NUM_SHADERS_VIDUYVY_ALPHAMASK);
@@ -264,7 +266,7 @@ void GLWidget::paintEvent(QPaintEvent *event)
         glBindTexture(GL_RECT_VID_TEXTURE_2D, this->m_vidTextures[0].texId);
 
 #ifdef TEXCOORDS_ALREADY_NORMALISED
-        this->m_vidTextures[0].effect = VidShaderLitNormalisedTexCoords;
+        this->m_vidTextures[0].effect = VidShaderLit;
 #else
         this->m_vidTextures[0].effect = VidShaderLitNormalisedTexCoords;
 #endif
@@ -1062,6 +1064,9 @@ void GLWidget::setAppropriateVidShader(int vidIx)
         case VidShaderNoEffectNormalisedTexCoords:
             this->m_vidTextures[vidIx].shader = &m_I420NoEffectNormalised;
             break;
+        case VidShaderLit:
+            this->m_vidTextures[vidIx].shader = &m_I420Lit;
+            break;
         case VidShaderLitNormalisedTexCoords:
             this->m_vidTextures[vidIx].shader = &m_I420LitNormalised;
             break;
@@ -1086,6 +1091,9 @@ void GLWidget::setAppropriateVidShader(int vidIx)
             break;
         case VidShaderNoEffectNormalisedTexCoords:
             this->m_vidTextures[vidIx].shader = &m_UYVYNoEffectNormalised;
+            break;
+        case VidShaderLit:
+            this->m_vidTextures[vidIx].shader = &m_UYVYLit;
             break;
         case VidShaderLitNormalisedTexCoords:
             this->m_vidTextures[vidIx].shader = &m_UYVYLitNormalised;
@@ -1133,6 +1141,7 @@ void GLWidget::setVidShaderVars(int vidIx, bool printErrors)
         if(printErrors) printOpenGLError(__FILE__, __LINE__);
         break;
 
+    case VidShaderLit:
     case VidShaderLitNormalisedTexCoords:
         this->m_vidTextures[vidIx].shader->setUniformValue("u_vidTexture", 0); // texture unit index
         this->m_vidTextures[vidIx].shader->setUniformValue("u_yHeight", (GLfloat)this->m_vidTextures[vidIx].height);

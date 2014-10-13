@@ -17,6 +17,9 @@ extern GLShaderModule VidI420LitNormalisedShaderList[NUM_SHADERS_VIDI420_LIT_NOR
 #define NUM_SHADERS_VIDI420_NOEFFECT       3
 extern GLShaderModule VidI420NoEffectShaderList[NUM_SHADERS_VIDI420_NOEFFECT];
 
+#define NUM_SHADERS_VIDI420_LIT       3
+extern GLShaderModule VidI420LitShaderList[NUM_SHADERS_VIDI420_LIT];
+
 #define NUM_SHADERS_VIDI420_COLOURHILIGHT       3
 extern GLShaderModule VidI420ColourHilightShaderList[NUM_SHADERS_VIDI420_COLOURHILIGHT];
 
@@ -37,6 +40,9 @@ extern GLShaderModule VidUYVYLitNormalisedShaderList[NUM_SHADERS_VIDUYVY_LIT_NOR
 
 #define NUM_SHADERS_VIDUYVY_NOEFFECT       3
 extern GLShaderModule VidUYVYNoEffectShaderList[NUM_SHADERS_VIDUYVY_NOEFFECT];
+
+#define NUM_SHADERS_VIDUYVY_LIT       3
+extern GLShaderModule VidUYVYLitShaderList[NUM_SHADERS_VIDUYVY_LIT];
 
 #define NUM_SHADERS_VIDUYVY_COLOURHILIGHT       3
 extern GLShaderModule VidUYVYColourHilightShaderList[NUM_SHADERS_VIDUYVY_COLOURHILIGHT];
